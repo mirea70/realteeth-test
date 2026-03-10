@@ -1,6 +1,7 @@
 package com.realteeth.service.outbox;
 
 import com.realteeth.outbox.OutboxEvent;
+import com.realteeth.port.in.OutboxPublishUseCase;
 import com.realteeth.port.out.MessagePublisher;
 import com.realteeth.port.out.OutboxPersistenceOutport;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OutboxPublishService {
+public class OutboxPublishService implements OutboxPublishUseCase {
     private final OutboxPersistenceOutport outboxPersistenceOutport;
     private final MessagePublisher messagePublisher;
 

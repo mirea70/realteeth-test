@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(MockitoExtension.class)
 class ImageJobStatusTest {
-    @DisplayName("입력 문자열에 매칭되는 계좌 상태의 Enum을 반환한다.")
+    @DisplayName("입력 문자열에 매칭되는 이미지 작업 상태의 Enum을 반환한다.")
     @ParameterizedTest
     @ValueSource(strings = { "ACCEPTED", "accepTEd" })
     void from(String status) {
@@ -44,6 +44,7 @@ class ImageJobStatusTest {
             "SUCCEEDED",
             "FAILED"
     })
+
     void isTerminalExpectTrue(ImageJobStatus status) {
         // when
         boolean result = status.isTerminal();

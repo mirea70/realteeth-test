@@ -3,10 +3,13 @@ package com.realteeth;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-public class RealteethApiApplication {
+@EnableScheduling
+@ConfigurationPropertiesScan
+public class RealteethBatchApplication {
     public static void main(String[] args) {
-        SpringApplication.run(RealteethApiApplication.class, args);
+        SpringApplication.run(RealteethBatchApplication.class, args);
     }
 }

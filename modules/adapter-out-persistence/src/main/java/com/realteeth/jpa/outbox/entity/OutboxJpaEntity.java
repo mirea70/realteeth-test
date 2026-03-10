@@ -1,18 +1,19 @@
 package com.realteeth.jpa.outbox.entity;
 
+import com.realteeth.common.DomainType;
 import com.realteeth.outbox.OutboxEvent;
+import com.realteeth.outbox.OutboxEventType;
+import com.realteeth.outbox.OutboxStatus;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "outbox_event")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
+@Builder
 @Getter
 public class OutboxJpaEntity {
 
@@ -37,7 +38,6 @@ public class OutboxJpaEntity {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
     private LocalDateTime publishedAt;
 
     public static OutboxJpaEntity from(OutboxEvent outboxEvent) {
@@ -45,11 +45,24 @@ public class OutboxJpaEntity {
                 outboxEvent.getId(),
                 outboxEvent.getDomainType().name(),
                 outboxEvent.getDomainId(),
-                outboxEvent.getType(),
+                outboxEvent.getType().name(),
                 outboxEvent.getPayload(),
                 outboxEvent.getStatus().name(),
                 outboxEvent.getCreatedAt(),
                 outboxEvent.getPublishedAt()
+        );
+    }
+
+    public OutboxEvent toDomain() {
+        return OutboxEvent.fromOutside(
+                id,
+                DomainType.from(domainType),
+                domainId,
+                OutboxEventType.from(type),
+                payload,
+                OutboxStatus.from(status),
+                createdAt,
+                publishedAt
         );
     }
 }

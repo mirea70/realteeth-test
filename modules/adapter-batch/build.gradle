@@ -1,0 +1,10 @@
+dependencies {
+    // module
+    implementation project(":application")
+    implementation project(":util")
+    implementation project(":adapter-out-persistence")
+    implementation project(":adapter-out-mq")
+
+    // spring
+    implementation 'org.springframework.boot:spring-boot-starter'
+}

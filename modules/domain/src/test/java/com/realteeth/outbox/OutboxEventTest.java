@@ -18,7 +18,7 @@ class OutboxEventTest {
         Long id = 1L;
         DomainType domainType = DomainType.IMAGE_JOB;
         Long domainId = 33L;
-        String type = "TO_DISPATCHING";
+        OutboxEventType type = OutboxEventType.DISPATCH;
         String payload = "{example:31}";
         LocalDateTime now = LocalDateTime.now();
 
@@ -49,7 +49,7 @@ class OutboxEventTest {
         Long id = 1L;
         DomainType domainType = DomainType.IMAGE_JOB;
         Long domainId = 33L;
-        String type = "TO_DISPATCHING";
+        OutboxEventType type = OutboxEventType.DISPATCH;
         String payload = "{example:31}";
         LocalDateTime created = LocalDateTime.now();
 

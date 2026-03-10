@@ -7,6 +7,7 @@ import com.realteeth.error.info.ImageJobErrorInfo;
 import com.realteeth.imagejob.model.ImageJob;
 import com.realteeth.imagejob.model.ImageJobId;
 import com.realteeth.outbox.OutboxEvent;
+import com.realteeth.outbox.OutboxEventType;
 import com.realteeth.port.in.ImageJobUseCase;
 import com.realteeth.port.out.DataSerializerOutPort;
 import com.realteeth.port.out.IdGenerator;
@@ -52,7 +53,7 @@ public class ImageJobService implements ImageJobUseCase {
                         idGenerator.nextId(),
                         DomainType.IMAGE_JOB,
                         imageJobIdValue,
-                        "IMAGEGOB_DISPATCH",
+                        OutboxEventType.DISPATCH,
                         dataSerializerOutPort.serialize(imageJob),
                         now
                 )

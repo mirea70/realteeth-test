@@ -1,1 +1,12 @@
-dependencies {}
+dependencies {
+    // module
+    implementation project(':domain')
+    implementation project(':application')
+
+    // rabbitMq
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
+    // config
+    implementation "org.springframework:spring-context"
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+}

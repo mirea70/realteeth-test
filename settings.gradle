@@ -2,12 +2,14 @@ rootProject.name = 'realteeth_test'
 
 include 'domain'
 include 'application'
+include 'util'
 include 'adapter-in-api'
 include 'adapter-in-worker'
+include 'adapter-batch'
 include 'adapter-out-persistence'
 include 'adapter-out-mq'
 include 'adapter-out-worker'
-include 'adapter-out-util'
+
 
 for (project in rootProject.children) {
     project.projectDir = file("modules/${project.name}")

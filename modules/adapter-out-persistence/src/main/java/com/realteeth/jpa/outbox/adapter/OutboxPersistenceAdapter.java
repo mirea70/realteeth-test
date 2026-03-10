@@ -5,6 +5,7 @@ import com.realteeth.jpa.outbox.repository.OutboxJpaRepository;
 import com.realteeth.outbox.OutboxEvent;
 import com.realteeth.port.out.OutboxPersistenceOutport;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class OutboxPersistenceAdapter implements OutboxPersistenceOutport {
     private final OutboxJpaRepository outboxJpaRepository;
 
@@ -31,6 +33,7 @@ public class OutboxPersistenceAdapter implements OutboxPersistenceOutport {
     @Override
     @Transactional
     public boolean markPublishing(Long outboxId) {
+        log.info("markPublishing called. outboxId={}", outboxId);
         return outboxJpaRepository.markPublishing(outboxId);
     }
 

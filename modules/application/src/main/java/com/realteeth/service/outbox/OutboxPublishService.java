@@ -35,6 +35,7 @@ public class OutboxPublishService {
                     publishedCount++;
                 }
             } catch (Exception e) {
+                log.error("[PUBLISHING] -> [PUBLISHED] Failed. eventId : " + event.getId(), e);
                 outboxPersistenceOutport.markPendingAgain(event.getId()); // 다시 발행 시도할 수 있게 복구
             }
         }

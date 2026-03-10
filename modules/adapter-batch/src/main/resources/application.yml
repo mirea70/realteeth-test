@@ -11,7 +11,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    show-sql: true
+        highlight_sql: true
+    show-sql: false
   rabbitmq:
     host: localhost
     port: 5672

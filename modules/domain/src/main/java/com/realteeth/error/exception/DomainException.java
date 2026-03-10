@@ -20,6 +20,12 @@ public class DomainException extends RuntimeException {
         this.details = Map.of();
     }
 
+    public DomainException(ErrorInfo errorInfo, Object... args) {
+        super(String.format(errorInfo.getMessage(), args));
+        this.errorInfo = errorInfo;
+        this.details = Map.of();
+    }
+
     public DomainException(ErrorInfo errorInfo, Map<String, Object> details) {
         super(errorInfo.getMessage());
         this.errorInfo = errorInfo;

@@ -4,4 +4,8 @@ dependencies {
 
     // spring
     implementation "org.springframework:spring-context"
+
+    // data
+    implementation 'com.fasterxml.jackson.core:jackson-databind:'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 }

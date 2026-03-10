@@ -15,8 +15,9 @@ import java.util.Optional;
 public class ImageJobPersistenceAdapter implements ImageJobPersistenceOutport {
     private final ImageJobJpaRepository imageJobJpaRepository;
 
-    public void insert(ImageJob imageJob) {
-        imageJobJpaRepository.save(ImageJobJpaEntity.from(imageJob));
+    public ImageJob insert(ImageJob imageJob) {
+        return imageJobJpaRepository.save(ImageJobJpaEntity.from(imageJob))
+                .toDomain();
     }
 
     public Optional<ImageJob> loadOne(ImageJobId id) {

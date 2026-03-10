@@ -41,4 +41,8 @@ public enum ImageJobStatus {
 
         return result;
     }
+
+    public boolean isTerminal() {
+        return this == SUCCEEDED || this == FAILED;
+    }
 }

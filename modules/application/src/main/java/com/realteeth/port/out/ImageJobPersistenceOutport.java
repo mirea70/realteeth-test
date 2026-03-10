@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface ImageJobPersistenceOutport {
     Optional<ImageJob> loadOne(ImageJobId id);
+    ImageJob insert(ImageJob imageJob);
 }

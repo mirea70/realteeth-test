@@ -13,6 +13,7 @@ import com.realteeth.port.out.DataSerializerOutPort;
 import com.realteeth.port.out.IdGenerator;
 import com.realteeth.port.out.ImageJobPersistenceOutport;
 import com.realteeth.port.out.OutboxPersistenceOutport;
+import com.realteeth.worker.WorkerDispatchEventPayload;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +55,10 @@ public class ImageJobService implements ImageJobUseCase {
                         DomainType.IMAGE_JOB,
                         imageJobIdValue,
                         OutboxEventType.DISPATCH,
-                        dataSerializerOutPort.serialize(imageJob),
+                        dataSerializerOutPort.serialize(
+                                new WorkerDispatchEventPayload(imageJobIdValue
+                                )
+                        ),
                         now
                 )
         );

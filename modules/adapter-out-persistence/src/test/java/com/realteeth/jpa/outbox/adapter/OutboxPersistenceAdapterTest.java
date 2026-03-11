@@ -7,8 +7,6 @@ import com.realteeth.outbox.OutboxEventType;
 import com.realteeth.outbox.OutboxStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,9 +14,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
-
-    @Autowired
-    private TestEntityManager testEntityManager;
 
     @DisplayName("Pending 상태인 Outbox 이벤트들을 반환한다.")
     @Test
@@ -81,9 +76,9 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .publishedAt(null)
                 .build();
 
-        testEntityManager.persist(entity);
-        testEntityManager.flush();
-        testEntityManager.clear();
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
 
         // when
         boolean result = outboxPersistenceAdapter.markPublishing(outboxId);
@@ -91,7 +86,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         // then
         assertThat(result).isTrue();
 
-        OutboxJpaEntity updated = testEntityManager.find(OutboxJpaEntity.class, outboxId);
+        OutboxJpaEntity updated = entityManager.find(OutboxJpaEntity.class, outboxId);
         assertThat(updated).isNotNull();
         assertThat(updated.getStatus()).isEqualTo(OutboxStatus.PUBLISHING.name());
         assertThat(updated.getPublishedAt()).isNotNull();
@@ -114,9 +109,9 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .publishedAt(null)
                 .build();
 
-        testEntityManager.persist(entity);
-        testEntityManager.flush();
-        testEntityManager.clear();
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
 
         // when
         boolean result = outboxPersistenceAdapter.markPublishing(outboxId);
@@ -124,7 +119,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         // then
         assertThat(result).isFalse();
 
-        OutboxJpaEntity notUpdated = testEntityManager.find(OutboxJpaEntity.class, outboxId);
+        OutboxJpaEntity notUpdated = entityManager.find(OutboxJpaEntity.class, outboxId);
         assertThat(notUpdated).isNotNull();
         assertThat(notUpdated.getStatus()).isEqualTo(OutboxStatus.PUBLISHED.name());
     }
@@ -146,9 +141,9 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .publishedAt(null)
                 .build();
 
-        testEntityManager.persist(entity);
-        testEntityManager.flush();
-        testEntityManager.clear();
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
 
         // when
         boolean result = outboxPersistenceAdapter.markPublished(outboxId);
@@ -156,7 +151,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         // then
         assertThat(result).isTrue();
 
-        OutboxJpaEntity updated = testEntityManager.find(OutboxJpaEntity.class, outboxId);
+        OutboxJpaEntity updated = entityManager.find(OutboxJpaEntity.class, outboxId);
         assertThat(updated).isNotNull();
         assertThat(updated.getStatus()).isEqualTo(OutboxStatus.PUBLISHED.name());
         assertThat(updated.getPublishedAt()).isNotNull();
@@ -179,9 +174,9 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .publishedAt(null)
                 .build();
 
-        testEntityManager.persist(entity);
-        testEntityManager.flush();
-        testEntityManager.clear();
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
 
         // when
         boolean result = outboxPersistenceAdapter.markPublished(outboxId);
@@ -189,7 +184,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         // then
         assertThat(result).isFalse();
 
-        OutboxJpaEntity notUpdated = testEntityManager.find(OutboxJpaEntity.class, outboxId);
+        OutboxJpaEntity notUpdated = entityManager.find(OutboxJpaEntity.class, outboxId);
         assertThat(notUpdated).isNotNull();
         assertThat(notUpdated.getStatus()).isEqualTo(OutboxStatus.PENDING.name());
         assertThat(notUpdated.getPublishedAt()).isNull();
@@ -212,9 +207,9 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .publishedAt(null)
                 .build();
 
-        testEntityManager.persist(entity);
-        testEntityManager.flush();
-        testEntityManager.clear();
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
 
         // when
         boolean result = outboxPersistenceAdapter.markPendingAgain(outboxId);
@@ -222,7 +217,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         // then
         assertThat(result).isTrue();
 
-        OutboxJpaEntity updated = testEntityManager.find(OutboxJpaEntity.class, outboxId);
+        OutboxJpaEntity updated = entityManager.find(OutboxJpaEntity.class, outboxId);
         assertThat(updated).isNotNull();
         assertThat(updated.getStatus()).isEqualTo(OutboxStatus.PENDING.name());
         assertThat(updated.getPublishedAt()).isNotNull();
@@ -245,9 +240,9 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .publishedAt(null)
                 .build();
 
-        testEntityManager.persist(entity);
-        testEntityManager.flush();
-        testEntityManager.clear();
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
 
         // when
         boolean result = outboxPersistenceAdapter.markPendingAgain(outboxId);
@@ -255,7 +250,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         // then
         assertThat(result).isFalse();
 
-        OutboxJpaEntity notUpdated = testEntityManager.find(OutboxJpaEntity.class, outboxId);
+        OutboxJpaEntity notUpdated = entityManager.find(OutboxJpaEntity.class, outboxId);
         assertThat(notUpdated).isNotNull();
         assertThat(notUpdated.getStatus()).isEqualTo(OutboxStatus.PUBLISHED.name());
     }

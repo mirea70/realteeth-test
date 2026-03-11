@@ -1,1 +1,18 @@
-dependencies {}
+dependencies {
+    // module
+    implementation project(':domain')
+    implementation project(':application')
+    implementation project(':adapter-out-persistence')
+    implementation project(':util')
+    implementation project(':adapter-out-mq')
+    implementation project(':adapter-out-worker')
+
+    // rabbitMq
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
+    // web
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // validation
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+}

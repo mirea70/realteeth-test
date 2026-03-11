@@ -20,4 +20,17 @@ public class ImageJobId {
             throw new DomainException(ImageJobErrorInfo.ID_NOT_POSITIVE);
         }
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof ImageJobId other)) {
+            return false;
+        }
+        return this.value == other.value;
+    }
+
+    @Override
+    public int hashCode() {
+        return Long.hashCode(value);
+    }
 }

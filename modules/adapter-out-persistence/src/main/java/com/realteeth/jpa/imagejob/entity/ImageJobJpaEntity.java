@@ -41,8 +41,10 @@ public class ImageJobJpaEntity {
 
     private LocalDateTime failedAt;
 
+    @Column(nullable = false)
     private Integer dispatchAttemptCount;
 
+    @Column(nullable = false)
     private Integer pollAttemptCount;
 
     private LocalDateTime nextPollAt;
@@ -89,6 +91,29 @@ public class ImageJobJpaEntity {
                 .createdAt(imageJob.getCreatedAt())
                 .updatedAt(imageJob.getUpdatedAt())
                 .build();
+    }
+
+    public void apply(ImageJob imageJob) {
+        ImageJobResult imageJobResult = imageJob.getResult();
+        ImageJobFailure imageJobFailure = imageJob.getFailure();
+
+        this.sourceImageUrl = imageJob.getSourceImageUrl();
+        this.status = imageJob.getStatus().name();
+        this.workerJobId = imageJob.getWorkerJobId();
+
+        this.resultImageUrl = imageJobResult != null ? imageJobResult.getValue() : null;
+        this.resultAt = imageJobResult != null ? imageJobResult.getCompletedAt() : null;
+
+        this.failureCode = imageJobFailure != null ? imageJobFailure.getCode() : null;
+        this.failureMessage = imageJobFailure != null ? imageJobFailure.getMessage() : null;
+        this.failedAt = imageJobFailure != null ? imageJobFailure.getFailedAt() : null;
+
+        this.dispatchAttemptCount = imageJob.getDispatchAttemptCount();
+        this.pollAttemptCount = imageJob.getPollAttemptCount();
+        this.nextPollAt = imageJob.getNextPollAt();
+
+        this.createdAt = imageJob.getCreatedAt();
+        this.updatedAt = imageJob.getUpdatedAt();
     }
 
     public ImageJob toDomain() {

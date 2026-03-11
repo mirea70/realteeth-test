@@ -14,7 +14,6 @@ import static com.realteeth.imagejob.model.ImageJobStatus.*;
 
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
 public class ImageJob {
     private final ImageJobId id;
     private final String sourceImageUrl;
@@ -29,39 +28,49 @@ public class ImageJob {
     private LocalDateTime updatedAt;
 
     public static ImageJob createNew(Long id, String sourceImageUrl, LocalDateTime now) {
-        return ImageJob.builder()
-                .id(new ImageJobId(id))
-                .sourceImageUrl(sourceImageUrl)
-                .status(ACCEPTED)
-                .workerJobId(null)
-                .result(null)
-                .failure(null)
-                .dispatchAttemptCount(0)
-                .pollAttemptCount(0)
-                .nextPollAt(null)
-                .createdAt(now)
-                .updatedAt(now)
-                .build();
+        return new ImageJob(
+                new ImageJobId(id),
+                sourceImageUrl,
+                ACCEPTED,
+                null,
+                null,
+                null,
+                0,
+                0,
+                null,
+                now,
+                now
+        );
     }
 
     public static ImageJob fromOutside(Long id, String sourceImageUrl, String status, String workerJobId, String resultImageUrl, LocalDateTime resultAt, Integer failureCode, String failureMessage, LocalDateTime failAt, Integer dispatchAttemptCount, Integer pollAttemptCount, LocalDateTime nextPollAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        return ImageJob.builder()
-                .id(new ImageJobId(id))
-                .sourceImageUrl(sourceImageUrl)
-                .status(ImageJobStatus.from(status))
-                .workerJobId(workerJobId)
-                .result(ImageJobResult.of(resultImageUrl, resultAt))
-                .failure(ImageJobFailure.of(failureCode, failureMessage, failAt))
-                .dispatchAttemptCount(dispatchAttemptCount)
-                .pollAttemptCount(pollAttemptCount)
-                .nextPollAt(nextPollAt)
-                .createdAt(createdAt)
-                .updatedAt(updatedAt)
-                .build();
+        return new ImageJob(
+                new ImageJobId(id),
+                sourceImageUrl,
+                ImageJobStatus.from(status),
+                workerJobId,
+                ImageJobResult.of(resultImageUrl, resultAt),
+                ImageJobFailure.of(failureCode, failureMessage, failAt),
+                dispatchAttemptCount,
+                pollAttemptCount,
+                nextPollAt,
+                createdAt,
+                updatedAt
+        );
     }
 
     public void markPublishPending() {
         transitionTo(PUBLISH_PENDING, LocalDateTime.now());
+    }
+
+    public void markProcessing(String workerJobId, LocalDateTime nextPollAt) {
+        transitionTo(PROCESSING, LocalDateTime.now());
+        this.workerJobId = workerJobId;
+        this.nextPollAt = nextPollAt;
+    }
+
+    public boolean isDispatchable() {
+        return isAllowed(status, DISPATCHING);
     }
 
     private void transitionTo(ImageJobStatus next, LocalDateTime now) {

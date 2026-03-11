@@ -1,0 +1,4 @@
+worker:
+  baseUrl: https://dev.realteeth.ai/mock
+  candidateName: test
+  email: test@naver.com

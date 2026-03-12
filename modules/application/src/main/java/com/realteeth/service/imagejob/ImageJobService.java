@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class ImageJobService implements ImageJobUseCase {
     private final DataSerializerOutPort dataSerializerOutPort;
     private final OutboxPersistenceOutport outboxPersistenceOutport;
 
+    @Override
     @Transactional(readOnly = true)
     public ImageJobResponse readOne(Long requestImageJobId) {
         ImageJob imageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(requestImageJobId))
@@ -36,6 +38,15 @@ public class ImageJobService implements ImageJobUseCase {
         return ImageJobResponse.from(imageJob);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ImageJobResponse> readAll(int page, int size) {
+        return imageJobPersistenceOutport.loadAll(page, size).stream()
+                .map(ImageJobResponse::from)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public ImageJobResponse register(String sourceImageUrl) {
         Long imageJobIdValue = idGenerator.nextId();

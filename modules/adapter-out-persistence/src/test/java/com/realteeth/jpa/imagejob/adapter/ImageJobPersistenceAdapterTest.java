@@ -314,6 +314,67 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         assertFalse(result);
     }
 
+    @Test
+    @DisplayName("loadAll - page, size 기준으로 ImageJob 목록을 조회한다")
+    void loadAll_success() {
+        // given
+        LocalDateTime baseTime = LocalDateTime.of(2026, 3, 12, 9, 0);
+
+        ImageJobJpaEntity entity1 = createImageJobEntity(
+                10L,
+                ImageJobStatus.ACCEPTED,
+                0,
+                baseTime
+        );
+
+        ImageJobJpaEntity entity2 = createImageJobEntity(
+                11L,
+                ImageJobStatus.PUBLISHED,
+                1,
+                baseTime.plusMinutes(1)
+        );
+
+        ImageJobJpaEntity entity3 = createImageJobEntity(
+                12L,
+                ImageJobStatus.PROCESSING,
+                2,
+                baseTime.plusMinutes(2)
+        );
+
+        entityManager.persist(entity1);
+        entityManager.persist(entity2);
+        entityManager.persist(entity3);
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        var result = imageJobPersistenceAdapter.loadAll(0, 2);
+
+        // then
+        assertThat(result).hasSize(2);
+
+        assertThat(result)
+                .extracting(imageJob -> imageJob.getId().getValue())
+                .containsExactlyInAnyOrder(10L, 11L);
+
+        assertThat(result)
+                .extracting(ImageJob::getStatus)
+                .containsExactlyInAnyOrder(
+                        ImageJobStatus.ACCEPTED,
+                        ImageJobStatus.PUBLISHED
+                );
+    }
+
+    @Test
+    @DisplayName("loadAll - 저장된 데이터가 없으면 빈 리스트를 반환한다")
+    void loadAll_returnEmptyList_whenNoData() {
+        // when
+        var result = imageJobPersistenceAdapter.loadAll(0, 10);
+
+        // then
+        assertThat(result).isEmpty();
+    }
+
     private ImageJobJpaEntity createImageJobEntity(
             Long id,
             ImageJobStatus status,

@@ -2,6 +2,7 @@ package com.realteeth.imagejob.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.realteeth.dto.response.ImageJobResponse;
+import com.realteeth.imagejob.dto.request.ImageJobPageRequest;
 import com.realteeth.imagejob.dto.request.ImageJobProcessRequest;
 import com.realteeth.imagejob.model.ImageJobStatus;
 import com.realteeth.port.in.ImageJobUseCase;
@@ -104,5 +105,57 @@ class ImageJobControllerTest {
                 .andExpect(jsonPath("$.status").value(imageJobStatus.name()));
 
         then(imageJobUseCase).should(only()).register(sourceImageUrl);
+    }
+
+    @Test
+    @DisplayName("이미지 작업 목록 조회 요청이 오면 결과가 잘 조회되고, 200 OK를 반환한다")
+    void readAll_success() throws Exception {
+        // given
+        LocalDateTime now = LocalDateTime.now();
+
+        ImageJobResponse first = new ImageJobResponse(
+                1L,
+                "https://example.com/image1.png",
+                ImageJobStatus.ACCEPTED.name(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                now,
+                now
+        );
+
+        ImageJobResponse second = new ImageJobResponse(
+                2L,
+                "https://example.com/image2.png",
+                ImageJobStatus.SUCCEEDED.name(),
+                "https://example.com/result2.png",
+                null,
+                null,
+                null,
+                null,
+                now,
+                now
+        );
+
+        ImageJobPageRequest request = new ImageJobPageRequest(0, 2);
+
+        given(imageJobUseCase.readAll(0, 2))
+                .willReturn(java.util.List.of(first, second));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/imageJobs/list")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].imageJobId").value(1L))
+                .andExpect(jsonPath("$[0].sourceImageUrl").value("https://example.com/image1.png"))
+                .andExpect(jsonPath("$[0].status").value(ImageJobStatus.ACCEPTED.name()))
+                .andExpect(jsonPath("$[1].imageJobId").value(2L))
+                .andExpect(jsonPath("$[1].sourceImageUrl").value("https://example.com/image2.png"))
+                .andExpect(jsonPath("$[1].status").value(ImageJobStatus.SUCCEEDED.name()));
+
+        then(imageJobUseCase).should(only()).readAll(0, 2);
     }
 }

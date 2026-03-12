@@ -9,10 +9,12 @@ import com.realteeth.jpa.imagejob.repository.ImageJobJpaRepository;
 import com.realteeth.port.out.ImageJobPersistenceOutport;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -39,6 +41,13 @@ public class ImageJobPersistenceAdapter implements ImageJobPersistenceOutport {
     public Optional<ImageJob> loadOne(ImageJobId id) {
         return imageJobJpaRepository.findById(id.getValue())
                 .map(ImageJobJpaEntity::toDomain);
+    }
+
+    @Override
+    public List<ImageJob> loadAll(int page, int size) {
+        return imageJobJpaRepository.findAll(PageRequest.of(page, size))
+                .stream().map(ImageJobJpaEntity::toDomain)
+                .toList();
     }
 
     @Override

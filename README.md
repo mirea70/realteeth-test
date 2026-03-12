@@ -37,11 +37,21 @@
 
 ### 2.1 사전 요구사항
 - Java 21
+- Git
 - Docker & Docker Compose
+
+### 2.2 프로젝트 클론
+```bash
+git clone https://github.com/mirea70/realteeth-test.git
+```
 
 ### 2.2 인프라 실행
 ```bash
-docker-compose up -d
+cd realteeth-test
+```
+
+```bash
+docker compose up -d
 ```
 > MySQL(3306)과 RabbitMQ(5672)가 실행됩니다. `init.sql`에 의해 초기 테이블이 생성됩니다.
 

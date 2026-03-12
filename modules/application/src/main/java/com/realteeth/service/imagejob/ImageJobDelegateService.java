@@ -1,8 +1,10 @@
 package com.realteeth.service.imagejob;
 
 import com.realteeth.common.DomainType;
+import com.realteeth.dto.worker.WorkerProcessingInfo;
 import com.realteeth.error.exception.BusinessException;
 import com.realteeth.error.info.ImageJobErrorInfo;
+import com.realteeth.error.info.SystemErrorInfo;
 import com.realteeth.imagejob.model.ImageJob;
 import com.realteeth.imagejob.model.ImageJobId;
 import com.realteeth.outbox.OutboxEvent;
@@ -45,16 +47,17 @@ public class ImageJobDelegateService {
         }
 
         // MockWorker에 작업 위임
-        String apiKey = workerOutport.getApiKey();
-        String workerJobId = workerOutport.processStart(apiKey, imageJob.getSourceImageUrl());
-
+        String workerJobId = startWorkerOrHandleFailure(imageJobId, imageJob, now);
+        if(workerJobId == null){
+            return;
+        }
 
         // 작업 정보 다시 가져오기
         ImageJob dispatchingImageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
                 .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
 
         // Processing으로 변경
-        dispatchingImageJob.markProcessing(workerJobId, now.plus(pollDelay));
+        dispatchingImageJob.markProcessing(workerJobId, now.plus(pollDelay), now);
         imageJobPersistenceOutport.update(dispatchingImageJob);
 
         // Poll 이벤트 발행
@@ -73,5 +76,104 @@ public class ImageJobDelegateService {
                         now
                 )
         );
+    }
+
+    @Transactional
+    public void poll(Long imageJobId, String workerJobId) {
+        ImageJob imageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
+                .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (imageJob.getStatus().isTerminal()) {
+            return;
+        }
+
+        WorkerProcessingInfo processingInfo;
+        try {
+            processingInfo = workerOutport.getProcessingInfo(workerJobId);
+        } catch (BusinessException e) {
+            if(e.isRetryable()) {
+                throw e;
+            }
+
+
+
+            imageJob.markFailed(extractFailureCode(e), e.getMessage(), now);
+            imageJobPersistenceOutport.update(imageJob);
+            return;
+        }
+
+        switch (processingInfo.status()) {
+            case "PROCESSING" -> {
+                boolean claimed = imageJobPersistenceOutport.reschedulePoll(imageJob.getId(), now.plus(pollDelay), now);
+                if (!claimed){
+                    return;
+                }
+                // 다음 Poll 예약
+                outboxPersistenceOutport.insert(
+                        OutboxEvent.createNew(
+                                idGenerator.nextId(),
+                                DomainType.IMAGE_JOB,
+                                imageJobId,
+                                OutboxEventType.POLL,
+                                dataSerializerOutPort.serialize(
+                                        new WorkerPollEventPayload(
+                                                imageJobId,
+                                                processingInfo.jobId())
+                                ),
+                                now
+                        )
+                );
+            }
+            case "COMPLETED" -> {
+                imageJob.markSucceeded(processingInfo.result(), now);
+                imageJobPersistenceOutport.update(imageJob);
+            }
+            case "FAILED" -> {
+                // Mock Worker에서 실패결과 왔을 때, 실패 상세 정보 포함될 시 고도화 가능
+                imageJob.markFailed(400, "이미지 처리 위임 결과 -> 실패", now);
+                imageJobPersistenceOutport.update(imageJob);
+            }
+            default -> throw new BusinessException(SystemErrorInfo.WORKER_INVALID_STATUS);
+        }
+    }
+
+    private String startWorkerOrHandleFailure(Long imageJobId, ImageJob imageJob, LocalDateTime now) {
+        try {
+            String apiKey = workerOutport.getApiKey();
+            return workerOutport.processStart(apiKey, imageJob.getSourceImageUrl());
+        } catch (BusinessException e) {
+            if (e.isRetryable()) {
+                throw e;
+            }
+
+            ImageJob dispatchingImageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
+                    .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
+
+            dispatchingImageJob.markFailed(extractFailureCode(e), e.getMessage(), now);
+            imageJobPersistenceOutport.update(dispatchingImageJob);
+            return null;
+        }
+    }
+
+    private void handleDispatchFailure(Long imageJobId, BusinessException e, LocalDateTime now) {
+        if (e.isRetryable()) {
+            throw e;
+        }
+
+        ImageJob dispatchingImageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
+                .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
+
+        dispatchingImageJob.markFailed(extractFailureCode(e), e.getMessage(), now);
+        imageJobPersistenceOutport.update(dispatchingImageJob);
+    }
+
+    private int extractFailureCode(BusinessException e) {
+        Object status = e.getDetails().get("status");
+        if (status instanceof Integer value) {
+            return value;
+        }
+        return 500;
     }
 }

@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
 
@@ -140,6 +141,103 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorInfo")
                 .isEqualTo(SystemErrorInfo.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    @DisplayName("reschedulePoll - PROCESSING 상태이면 pollAttemptCount 증가 및 nextPollAt 갱신")
+    void reschedulePoll_success() {
+        // given
+        LocalDateTime createdAt = LocalDateTime.of(2026, 3, 12, 10, 0);
+        LocalDateTime nextPollAt = createdAt.plusMinutes(5);
+        LocalDateTime updatedAt = createdAt.plusMinutes(1);
+
+        ImageJobJpaEntity entity = createImageJobEntity(
+                1L,
+                ImageJobStatus.PROCESSING,
+                1,
+                createdAt
+        );
+
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        boolean result = imageJobPersistenceAdapter.reschedulePoll(
+                new ImageJobId(1L),
+                nextPollAt,
+                updatedAt
+        );
+
+        // then
+        assertTrue(result);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        ImageJobJpaEntity updated = entityManager.find(ImageJobJpaEntity.class, 1L);
+
+        assertEquals(1, updated.getDispatchAttemptCount());
+        assertEquals(1, updated.getPollAttemptCount()); // 기존 0 -> 1
+        assertEquals(nextPollAt, updated.getNextPollAt());
+        assertEquals(updatedAt, updated.getUpdatedAt());
+    }
+
+    @Test
+    @DisplayName("reschedulePoll - PROCESSING 상태가 아니면 업데이트되지 않고 false 반환")
+    void reschedulePoll_fail_whenNotProcessing() {
+        // given
+        LocalDateTime createdAt = LocalDateTime.of(2026, 3, 12, 10, 0);
+        LocalDateTime nextPollAt = createdAt.plusMinutes(5);
+        LocalDateTime updatedAt = createdAt.plusMinutes(1);
+
+        ImageJobJpaEntity entity = createImageJobEntity(
+                2L,
+                ImageJobStatus.SUCCEEDED,
+                1,
+                createdAt
+        );
+
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        boolean result = imageJobPersistenceAdapter.reschedulePoll(
+                new ImageJobId(2L),
+                nextPollAt,
+                updatedAt
+        );
+
+        // then
+        assertFalse(result);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        ImageJobJpaEntity notUpdated = entityManager.find(ImageJobJpaEntity.class, 2L);
+
+        assertEquals(0, notUpdated.getPollAttemptCount());
+        assertNull(notUpdated.getNextPollAt());
+        assertEquals(createdAt, notUpdated.getUpdatedAt());
+    }
+
+    @Test
+    @DisplayName("reschedulePoll - 존재하지 않는 ImageJob이면 false 반환")
+    void reschedulePoll_fail_whenNotExist() {
+        // given
+        LocalDateTime nextPollAt = LocalDateTime.now();
+        LocalDateTime updatedAt = LocalDateTime.now();
+
+        // when
+        boolean result = imageJobPersistenceAdapter.reschedulePoll(
+                new ImageJobId(999L),
+                nextPollAt,
+                updatedAt
+        );
+
+        // then
+        assertFalse(result);
     }
 
     private ImageJobJpaEntity createImageJobEntity(

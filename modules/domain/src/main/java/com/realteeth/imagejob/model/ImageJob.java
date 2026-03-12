@@ -59,14 +59,24 @@ public class ImageJob {
         );
     }
 
-    public void markPublishPending() {
-        transitionTo(PUBLISH_PENDING, LocalDateTime.now());
+    public void markPublishPending(LocalDateTime updatedAt) {
+        transitionTo(PUBLISH_PENDING, updatedAt);
     }
 
-    public void markProcessing(String workerJobId, LocalDateTime nextPollAt) {
-        transitionTo(PROCESSING, LocalDateTime.now());
+    public void markProcessing(String workerJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt) {
+        transitionTo(PROCESSING, updatedAt);
         this.workerJobId = workerJobId;
         this.nextPollAt = nextPollAt;
+    }
+
+    public void markSucceeded(String resultImageUrl, LocalDateTime updatedAt) {
+        transitionTo(SUCCEEDED, updatedAt);
+        this.result = ImageJobResult.of(resultImageUrl, updatedAt);
+    }
+
+    public void markFailed(Integer code, String message, LocalDateTime updatedAt) {
+        transitionTo(FAILED, updatedAt);
+        this.failure = ImageJobFailure.of(code, message, updatedAt);
     }
 
     public boolean isDispatchable() {

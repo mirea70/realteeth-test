@@ -14,15 +14,31 @@ public class ImageJobJpaQueryRepositoryImpl implements ImageJobJpaQueryRepositor
 
 
     @Override
-    public boolean markDispatching(Long imageJobId, LocalDateTime updateTime) {
+    public boolean markDispatching(Long imageJobId, LocalDateTime updatedAt) {
         long updated = queryFactory
                 .update(imageJob)
                 .set(imageJob.status, ImageJobStatus.DISPATCHING.name())
                 .set(imageJob.dispatchAttemptCount, imageJob.dispatchAttemptCount.add(1))
-                .set(imageJob.updatedAt, updateTime)
+                .set(imageJob.updatedAt, updatedAt)
                 .where(
                         imageJob.imageJobId.eq(imageJobId),
                         imageJob.status.eq(ImageJobStatus.PUBLISHED.name())
+                )
+                .execute();
+
+        return updated == 1L;
+    }
+
+    @Override
+    public boolean reschedulePoll(Long imageJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt) {
+        long updated = queryFactory
+                .update(imageJob)
+                .set(imageJob.pollAttemptCount, imageJob.pollAttemptCount.add(1))
+                .set(imageJob.nextPollAt, nextPollAt)
+                .set(imageJob.updatedAt, updatedAt)
+                .where(
+                        imageJob.imageJobId.eq(imageJobId),
+                        imageJob.status.eq(ImageJobStatus.PROCESSING.name())
                 )
                 .execute();
 

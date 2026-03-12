@@ -45,4 +45,9 @@ public class ImageJobPersistenceAdapter implements ImageJobPersistenceOutport {
 
         loadedJobJpaEntity.apply(imageJob);
     }
+
+    @Override
+    public boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt) {
+        return imageJobJpaRepository.reschedulePoll(imageJobId.getValue(), nextPollAt, updatedAt);
+    }
 }

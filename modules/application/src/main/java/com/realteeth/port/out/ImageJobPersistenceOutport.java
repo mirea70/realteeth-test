@@ -11,4 +11,5 @@ public interface ImageJobPersistenceOutport {
     ImageJob insert(ImageJob imageJob);
     boolean markDispatchingDirectly(ImageJobId imageJobId, LocalDateTime updatedAt);
     void update(ImageJob imageJob);
+    boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt);
 }

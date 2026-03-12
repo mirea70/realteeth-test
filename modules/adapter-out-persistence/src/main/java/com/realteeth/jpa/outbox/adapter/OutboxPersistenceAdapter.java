@@ -4,6 +4,7 @@ import com.realteeth.jpa.outbox.entity.OutboxJpaEntity;
 import com.realteeth.jpa.outbox.repository.OutboxJpaRepository;
 import com.realteeth.outbox.OutboxEvent;
 import com.realteeth.port.out.OutboxPersistenceOutport;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -17,10 +18,11 @@ import java.util.List;
 @Slf4j
 public class OutboxPersistenceAdapter implements OutboxPersistenceOutport {
     private final OutboxJpaRepository outboxJpaRepository;
+    private final EntityManager entityManager;
 
     @Override
     public void insert(OutboxEvent outboxEvent) {
-        outboxJpaRepository.save(OutboxJpaEntity.from(outboxEvent));
+        entityManager.persist(outboxEvent);
     }
 
     @Override

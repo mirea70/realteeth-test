@@ -47,7 +47,7 @@ public class ImageJobService implements ImageJobUseCase {
                 now
         );
 
-        imageJob.markPublishPending();
+        imageJob.markPublishPending(now);
         ImageJob result = imageJobPersistenceOutport.insert(imageJob);
         outboxPersistenceOutport.insert(
                 OutboxEvent.createNew(

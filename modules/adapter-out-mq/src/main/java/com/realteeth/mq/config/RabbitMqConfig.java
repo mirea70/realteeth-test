@@ -47,16 +47,6 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(pollQueue).to(imageJobExchange).with("IMAGE_JOB_POLL");
     }
 
-//    @Bean
-//    public CachingConnectionFactory connectionFactory() {
-//        CachingConnectionFactory connectionFactory = new CachingConnectionFactory();
-//        connectionFactory.setHost(rabbitMqProperties.host());
-//        connectionFactory.setPort(rabbitMqProperties.port());
-//        connectionFactory.setUsername(rabbitMqProperties.username());
-//        connectionFactory.setPassword(rabbitMqProperties.password());
-//        return connectionFactory;
-//    }
-
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);

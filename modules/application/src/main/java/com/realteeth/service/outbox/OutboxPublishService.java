@@ -24,20 +24,20 @@ public class OutboxPublishService implements OutboxPublishUseCase {
         int publishedCount = 0;
 
         for (OutboxEvent event : events) {
-            boolean claimed = outboxPersistenceOutport.markPublishing(event.getId());
+            boolean claimed = outboxPersistenceOutport.markPublishingDirectly(event.getId());
             if (!claimed) {
                 continue;
             }
 
             try {
                 messagePublisher.publish(event.getDomainType(), event.getType(), event.getPayload());
-                boolean marked = outboxPersistenceOutport.markPublished(event.getId());
+                boolean marked = outboxPersistenceOutport.markPublishedDirectly(event.getId());
                 if (marked) {
                     publishedCount++;
                 }
             } catch (Exception e) {
                 log.error("[PUBLISHING] -> [PUBLISHED] Failed. eventId : " + event.getId(), e);
-                outboxPersistenceOutport.markPendingAgain(event.getId()); // 다시 발행 시도할 수 있게 복구
+                outboxPersistenceOutport.markPendingAgainDirectly(event.getId()); // 다시 발행 시도할 수 있게 복구
             }
         }
 

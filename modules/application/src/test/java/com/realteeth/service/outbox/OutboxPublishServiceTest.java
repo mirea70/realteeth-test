@@ -42,9 +42,9 @@ class OutboxPublishServiceTest {
 
         given(outboxPersistenceOutport.findOnPending(10))
                 .willReturn(List.of(event));
-        given(outboxPersistenceOutport.markPublishing(1L))
+        given(outboxPersistenceOutport.markPublishingDirectly(1L))
                 .willReturn(true);
-        given(outboxPersistenceOutport.markPublished(1L))
+        given(outboxPersistenceOutport.markPublishedDirectly(1L))
                 .willReturn(true);
 
         // when
@@ -54,14 +54,14 @@ class OutboxPublishServiceTest {
         assertThat(result).isEqualTo(1);
 
         verify(outboxPersistenceOutport).findOnPending(10);
-        verify(outboxPersistenceOutport).markPublishing(1L);
+        verify(outboxPersistenceOutport).markPublishingDirectly(1L);
         verify(messagePublisher).publish(
                 event.getDomainType(),
                 event.getType(),
                 event.getPayload()
         );
-        verify(outboxPersistenceOutport).markPublished(1L);
-        verify(outboxPersistenceOutport, never()).markPendingAgain(anyLong());
+        verify(outboxPersistenceOutport).markPublishedDirectly(1L);
+        verify(outboxPersistenceOutport, never()).markPendingAgainDirectly(anyLong());
     }
 
     @DisplayName("markPublishing 에 실패하면 메시지를 발행하지 않고 건너뛴다.")
@@ -72,7 +72,7 @@ class OutboxPublishServiceTest {
 
         given(outboxPersistenceOutport.findOnPending(10))
                 .willReturn(List.of(event));
-        given(outboxPersistenceOutport.markPublishing(1L))
+        given(outboxPersistenceOutport.markPublishingDirectly(1L))
                 .willReturn(false);
 
         // when
@@ -82,10 +82,10 @@ class OutboxPublishServiceTest {
         assertThat(result).isZero();
 
         verify(outboxPersistenceOutport).findOnPending(10);
-        verify(outboxPersistenceOutport).markPublishing(1L);
+        verify(outboxPersistenceOutport).markPublishingDirectly(1L);
         verify(messagePublisher, never()).publish(any(), any(), any());
-        verify(outboxPersistenceOutport, never()).markPublished(anyLong());
-        verify(outboxPersistenceOutport, never()).markPendingAgain(anyLong());
+        verify(outboxPersistenceOutport, never()).markPublishedDirectly(anyLong());
+        verify(outboxPersistenceOutport, never()).markPendingAgainDirectly(anyLong());
     }
 
     @DisplayName("메시지 발행 중 예외가 발생하면 pending 상태로 복구한다.")
@@ -96,7 +96,7 @@ class OutboxPublishServiceTest {
 
         given(outboxPersistenceOutport.findOnPending(10))
                 .willReturn(List.of(event));
-        given(outboxPersistenceOutport.markPublishing(1L))
+        given(outboxPersistenceOutport.markPublishingDirectly(1L))
                 .willReturn(true);
 
         doThrow(new RuntimeException("mq publish failed"))
@@ -110,14 +110,14 @@ class OutboxPublishServiceTest {
         assertThat(result).isZero();
 
         verify(outboxPersistenceOutport).findOnPending(10);
-        verify(outboxPersistenceOutport).markPublishing(1L);
+        verify(outboxPersistenceOutport).markPublishingDirectly(1L);
         verify(messagePublisher).publish(
                 event.getDomainType(),
                 event.getType(),
                 event.getPayload()
         );
-        verify(outboxPersistenceOutport).markPendingAgain(1L);
-        verify(outboxPersistenceOutport, never()).markPublished(anyLong());
+        verify(outboxPersistenceOutport).markPendingAgainDirectly(1L);
+        verify(outboxPersistenceOutport, never()).markPublishedDirectly(anyLong());
     }
 
     @DisplayName("여러 pending 이벤트 중 성공한 건수만 반환한다.")
@@ -131,12 +131,12 @@ class OutboxPublishServiceTest {
         given(outboxPersistenceOutport.findOnPending(10))
                 .willReturn(List.of(event1, event2, event3));
 
-        given(outboxPersistenceOutport.markPublishing(1L)).willReturn(true);
-        given(outboxPersistenceOutport.markPublished(1L)).willReturn(true);
+        given(outboxPersistenceOutport.markPublishingDirectly(1L)).willReturn(true);
+        given(outboxPersistenceOutport.markPublishedDirectly(1L)).willReturn(true);
 
-        given(outboxPersistenceOutport.markPublishing(2L)).willReturn(false);
+        given(outboxPersistenceOutport.markPublishingDirectly(2L)).willReturn(false);
 
-        given(outboxPersistenceOutport.markPublishing(3L)).willReturn(true);
+        given(outboxPersistenceOutport.markPublishingDirectly(3L)).willReturn(true);
 
         doNothing()
                 .doThrow(new RuntimeException("mq error"))
@@ -159,11 +159,11 @@ class OutboxPublishServiceTest {
                 event3.getDomainType(), event3.getType(), event3.getPayload()
         );
 
-        verify(outboxPersistenceOutport).markPublished(1L);
-        verify(outboxPersistenceOutport, never()).markPublished(2L);
-        verify(outboxPersistenceOutport, never()).markPublished(3L);
+        verify(outboxPersistenceOutport).markPublishedDirectly(1L);
+        verify(outboxPersistenceOutport, never()).markPublishedDirectly(2L);
+        verify(outboxPersistenceOutport, never()).markPublishedDirectly(3L);
 
-        verify(outboxPersistenceOutport).markPendingAgain(3L);
+        verify(outboxPersistenceOutport).markPendingAgainDirectly(3L);
     }
 
     private OutboxEvent createOutboxEvent(Long id, OutboxStatus status) {

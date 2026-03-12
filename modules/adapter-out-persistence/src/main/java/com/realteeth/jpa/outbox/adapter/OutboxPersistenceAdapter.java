@@ -34,20 +34,20 @@ public class OutboxPersistenceAdapter implements OutboxPersistenceOutport {
 
     @Override
     @Transactional
-    public boolean markPublishing(Long outboxId) {
+    public boolean markPublishingDirectly(Long outboxId) {
         log.info("markPublishing called. outboxId={}", outboxId);
         return outboxJpaRepository.markPublishing(outboxId);
     }
 
     @Override
     @Transactional
-    public boolean markPublished(Long outboxId) {
+    public boolean markPublishedDirectly(Long outboxId) {
         return outboxJpaRepository.markPublished(outboxId);
     }
 
     @Override
     @Transactional
-    public boolean markPendingAgain(Long outboxId) {
+    public boolean markPendingAgainDirectly(Long outboxId) {
         return outboxJpaRepository.markPendingAgain(outboxId);
     }
 }

@@ -81,7 +81,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         entityManager.clear();
 
         // when
-        boolean result = outboxPersistenceAdapter.markPublishing(outboxId);
+        boolean result = outboxPersistenceAdapter.markPublishingDirectly(outboxId);
 
         // then
         assertThat(result).isTrue();
@@ -114,7 +114,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         entityManager.clear();
 
         // when
-        boolean result = outboxPersistenceAdapter.markPublishing(outboxId);
+        boolean result = outboxPersistenceAdapter.markPublishingDirectly(outboxId);
 
         // then
         assertThat(result).isFalse();
@@ -146,7 +146,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         entityManager.clear();
 
         // when
-        boolean result = outboxPersistenceAdapter.markPublished(outboxId);
+        boolean result = outboxPersistenceAdapter.markPublishedDirectly(outboxId);
 
         // then
         assertThat(result).isTrue();
@@ -179,7 +179,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         entityManager.clear();
 
         // when
-        boolean result = outboxPersistenceAdapter.markPublished(outboxId);
+        boolean result = outboxPersistenceAdapter.markPublishedDirectly(outboxId);
 
         // then
         assertThat(result).isFalse();
@@ -212,7 +212,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         entityManager.clear();
 
         // when
-        boolean result = outboxPersistenceAdapter.markPendingAgain(outboxId);
+        boolean result = outboxPersistenceAdapter.markPendingAgainDirectly(outboxId);
 
         // then
         assertThat(result).isTrue();
@@ -245,7 +245,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         entityManager.clear();
 
         // when
-        boolean result = outboxPersistenceAdapter.markPendingAgain(outboxId);
+        boolean result = outboxPersistenceAdapter.markPendingAgainDirectly(outboxId);
 
         // then
         assertThat(result).isFalse();

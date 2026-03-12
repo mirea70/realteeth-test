@@ -21,14 +21,6 @@
 
 </br>
 
-### 모듈 구성 (Multi-Module)
-- `modules/domain`: 업무 핵심 로직 및 엔티티 (`ImageJob`, `OutboxEvent`) 정의
-- `modules/application`: 비즈니스 UseCase 인터페이스 및 서비스 레이어 구현
-- `modules/adapter-in-api`: REST API 진입점 (`RestController`)
-- `modules/adapter-out-persistence`: JPA 기반 데이터베이스 접근 영속성 어댑터
-- `modules/adapter-out-worker`: 외부 이미지 처리 Worker와의 통신 어댑터 (Mock 연동)
-- `modules/adapter-batch`: 아웃박스 이벤트 발행 및 장애 복구를 위한 스케줄러
-
 ---
 
 </br>

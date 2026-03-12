@@ -1,10 +1,13 @@
+server:
+  port: 9090
+
 spring:
   application:
     name: RealteethApiApplication
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:13306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul}
-    username: ${SPRING_DATASOURCE_USERNAME:app}
-    password: ${SPRING_DATASOURCE_PASSWORD:app}
+    url: jdbc:mysql://localhost:13306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: root
+    password: root
   jpa:
     hibernate:
       ddl-auto: create

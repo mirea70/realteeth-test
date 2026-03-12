@@ -1,4 +1,26 @@
+server:
+  port: 9091
+
+spring:
+  application:
+    name: RealteethApiApplication
+  datasource:
+    url: jdbc:mysql://localhost:13306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username : guest
+    password : guest
+
 worker:
-  baseUrl: https://dev.realteeth.ai/mock
+  baseUrl: https://dev.realteeth.ai
   candidateName: test
   email: test@naver.com

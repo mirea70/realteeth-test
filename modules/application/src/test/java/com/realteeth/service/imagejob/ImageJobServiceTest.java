@@ -11,6 +11,7 @@ import com.realteeth.port.out.DataSerializerOutPort;
 import com.realteeth.port.out.IdGenerator;
 import com.realteeth.port.out.ImageJobPersistenceOutport;
 import com.realteeth.port.out.OutboxPersistenceOutport;
+import com.realteeth.worker.WorkerDispatchEventPayload;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -116,7 +117,7 @@ class ImageJobServiceTest {
         given(idGenerator.nextId())
                 .willReturn(imageJobId, outboxEventId);
 
-        given(dataSerializerOutPort.serialize(org.mockito.ArgumentMatchers.any(ImageJob.class)))
+        given(dataSerializerOutPort.serialize(any(WorkerDispatchEventPayload.class)))
                 .willReturn(serializedPayload);
 
         ArgumentCaptor<ImageJob> imageJobCaptor = ArgumentCaptor.forClass(ImageJob.class);

@@ -22,7 +22,7 @@ public class OutboxPersistenceAdapter implements OutboxPersistenceOutport {
 
     @Override
     public void insert(OutboxEvent outboxEvent) {
-        entityManager.persist(outboxEvent);
+        entityManager.persist(OutboxJpaEntity.from(outboxEvent));
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.realteeth.service.outbox;
 
 import com.realteeth.outbox.OutboxEvent;
 import com.realteeth.port.in.OutboxPublishUseCase;
+import com.realteeth.port.out.ImageJobPersistenceOutport;
 import com.realteeth.port.out.MessagePublisher;
 import com.realteeth.port.out.OutboxPersistenceOutport;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.List;
 public class OutboxPublishService implements OutboxPublishUseCase {
     private final OutboxPersistenceOutport outboxPersistenceOutport;
     private final MessagePublisher messagePublisher;
+    private final OutboxPublishTxFacade outboxPublishTxFacade;
 
     public int publishPending(int batchSize) {
         log.info("[OutboxPublishService] publishPending start...");
@@ -31,13 +33,17 @@ public class OutboxPublishService implements OutboxPublishUseCase {
 
             try {
                 messagePublisher.publish(event.getDomainType(), event.getType(), event.getPayload());
-                boolean marked = outboxPersistenceOutport.markPublishedDirectly(event.getId());
-                if (marked) {
+                boolean completed = outboxPublishTxFacade.completePublished(event);
+                if (completed) {
                     publishedCount++;
                 }
             } catch (Exception e) {
                 log.error("[PUBLISHING] -> [PUBLISHED] Failed. eventId : " + event.getId(), e);
-                outboxPersistenceOutport.markPendingAgainDirectly(event.getId()); // 다시 발행 시도할 수 있게 복구
+                try {
+                    outboxPublishTxFacade.rollbackToPending(event.getId());
+                } catch (Exception rollbackEx) {
+                    log.error("아웃박스 이벤트를 PENDING 상태로 롤백하는데 실패하였습니다. eventId={}", event.getId(), rollbackEx);
+                }
             }
         }
 

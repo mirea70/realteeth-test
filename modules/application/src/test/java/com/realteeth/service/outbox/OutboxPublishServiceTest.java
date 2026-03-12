@@ -18,7 +18,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -31,11 +30,14 @@ class OutboxPublishServiceTest {
     @Mock
     private MessagePublisher messagePublisher;
 
+    @Mock
+    private OutboxPublishTxFacade outboxPublishTxFacade;
+
     @InjectMocks
     private OutboxPublishService outboxPublishService;
 
-    @DisplayName("pending 이벤트를 발행하고 published 처리한다.")
     @Test
+    @DisplayName("pending 이벤트를 발행하고 completePublished 처리에 성공하면 성공 건수를 증가시킨다")
     void publishPending_success() {
         // given
         OutboxEvent event = createOutboxEvent(1L, OutboxStatus.PENDING);
@@ -44,7 +46,7 @@ class OutboxPublishServiceTest {
                 .willReturn(List.of(event));
         given(outboxPersistenceOutport.markPublishingDirectly(1L))
                 .willReturn(true);
-        given(outboxPersistenceOutport.markPublishedDirectly(1L))
+        given(outboxPublishTxFacade.completePublished(event))
                 .willReturn(true);
 
         // when
@@ -60,12 +62,12 @@ class OutboxPublishServiceTest {
                 event.getType(),
                 event.getPayload()
         );
-        verify(outboxPersistenceOutport).markPublishedDirectly(1L);
-        verify(outboxPersistenceOutport, never()).markPendingAgainDirectly(anyLong());
+        verify(outboxPublishTxFacade).completePublished(event);
+        verify(outboxPublishTxFacade, never()).rollbackToPending(any());
     }
 
-    @DisplayName("markPublishing 에 실패하면 메시지를 발행하지 않고 건너뛴다.")
     @Test
+    @DisplayName("markPublishing 에 실패하면 메시지를 발행하지 않고 건너뛴다")
     void publishPending_skip_when_claim_failed() {
         // given
         OutboxEvent event = createOutboxEvent(1L, OutboxStatus.PENDING);
@@ -84,12 +86,12 @@ class OutboxPublishServiceTest {
         verify(outboxPersistenceOutport).findOnPending(10);
         verify(outboxPersistenceOutport).markPublishingDirectly(1L);
         verify(messagePublisher, never()).publish(any(), any(), any());
-        verify(outboxPersistenceOutport, never()).markPublishedDirectly(anyLong());
-        verify(outboxPersistenceOutport, never()).markPendingAgainDirectly(anyLong());
+        verify(outboxPublishTxFacade, never()).completePublished(any());
+        verify(outboxPublishTxFacade, never()).rollbackToPending(any());
     }
 
-    @DisplayName("메시지 발행 중 예외가 발생하면 pending 상태로 복구한다.")
     @Test
+    @DisplayName("메시지 발행 중 예외가 발생하면 rollbackToPending 을 호출한다")
     void publishPending_restore_pending_when_publish_fails() {
         // given
         OutboxEvent event = createOutboxEvent(1L, OutboxStatus.PENDING);
@@ -116,12 +118,88 @@ class OutboxPublishServiceTest {
                 event.getType(),
                 event.getPayload()
         );
-        verify(outboxPersistenceOutport).markPendingAgainDirectly(1L);
-        verify(outboxPersistenceOutport, never()).markPublishedDirectly(anyLong());
+        verify(outboxPublishTxFacade, never()).completePublished(any());
+        verify(outboxPublishTxFacade).rollbackToPending(1L);
     }
 
-    @DisplayName("여러 pending 이벤트 중 성공한 건수만 반환한다.")
     @Test
+    @DisplayName("completePublished 에서 예외가 발생하면 rollbackToPending 을 호출한다")
+    void publishPending_restore_pending_when_completePublished_fails() {
+        // given
+        OutboxEvent event = createOutboxEvent(1L, OutboxStatus.PENDING);
+
+        given(outboxPersistenceOutport.findOnPending(10))
+                .willReturn(List.of(event));
+        given(outboxPersistenceOutport.markPublishingDirectly(1L))
+                .willReturn(true);
+        doNothing().when(messagePublisher)
+                .publish(event.getDomainType(), event.getType(), event.getPayload());
+        given(outboxPublishTxFacade.completePublished(event))
+                .willThrow(new RuntimeException("tx facade failed"));
+
+        // when
+        int result = outboxPublishService.publishPending(10);
+
+        // then
+        assertThat(result).isZero();
+
+        verify(messagePublisher).publish(
+                event.getDomainType(),
+                event.getType(),
+                event.getPayload()
+        );
+        verify(outboxPublishTxFacade).completePublished(event);
+        verify(outboxPublishTxFacade).rollbackToPending(1L);
+    }
+
+    @Test
+    @DisplayName("rollbackToPending 에서 예외가 발생해도 다음 이벤트 처리는 계속된다")
+    void publishPending_continue_when_rollback_fails() {
+        // given
+        OutboxEvent failedEvent = createOutboxEvent(1L, OutboxStatus.PENDING);
+        OutboxEvent successEvent = createOutboxEvent(2L, OutboxStatus.PENDING);
+
+        given(outboxPersistenceOutport.findOnPending(10))
+                .willReturn(List.of(failedEvent, successEvent));
+
+        given(outboxPersistenceOutport.markPublishingDirectly(1L)).willReturn(true);
+        given(outboxPersistenceOutport.markPublishingDirectly(2L)).willReturn(true);
+
+        doThrow(new RuntimeException("mq publish failed"))
+                .when(messagePublisher)
+                .publish(
+                        failedEvent.getDomainType(),
+                        failedEvent.getType(),
+                        failedEvent.getPayload()
+                );
+
+        doNothing()
+                .when(messagePublisher)
+                .publish(
+                        successEvent.getDomainType(),
+                        successEvent.getType(),
+                        successEvent.getPayload()
+                );
+
+        doThrow(new RuntimeException("rollback failed"))
+                .when(outboxPublishTxFacade)
+                .rollbackToPending(1L);
+
+        given(outboxPublishTxFacade.completePublished(successEvent))
+                .willReturn(true);
+
+        // when
+        int result = outboxPublishService.publishPending(10);
+
+        // then
+        assertThat(result).isEqualTo(1);
+
+        verify(outboxPublishTxFacade).rollbackToPending(1L);
+        verify(outboxPublishTxFacade).completePublished(successEvent);
+    }
+
+    @Test
+    @DisplayName("여러 pending 이벤트 중 completePublished 성공한 건수만 반환한다")
     void publishPending_returns_only_success_count() {
         // given
         OutboxEvent event1 = createOutboxEvent(1L, OutboxStatus.PENDING);
@@ -132,16 +210,21 @@ class OutboxPublishServiceTest {
                 .willReturn(List.of(event1, event2, event3));
 
         given(outboxPersistenceOutport.markPublishingDirectly(1L)).willReturn(true);
-        given(outboxPersistenceOutport.markPublishedDirectly(1L)).willReturn(true);
-
         given(outboxPersistenceOutport.markPublishingDirectly(2L)).willReturn(false);
-
         given(outboxPersistenceOutport.markPublishingDirectly(3L)).willReturn(true);
 
-        doNothing()
-                .doThrow(new RuntimeException("mq error"))
-                .when(messagePublisher)
-                .publish(any(), any(), any());
+        given(outboxPublishTxFacade.completePublished(event1)).willReturn(true);
+
+        doAnswer(invocation -> {
+            DomainType domainType = invocation.getArgument(0);
+            OutboxEventType eventType = invocation.getArgument(1);
+            String payload = invocation.getArgument(2);
+
+            if (payload.equals(event3.getPayload())) {
+                throw new RuntimeException("mq error");
+            }
+            return null;
+        }).when(messagePublisher).publish(any(), any(), any());
 
         // when
         int result = outboxPublishService.publishPending(10);
@@ -150,20 +233,26 @@ class OutboxPublishServiceTest {
         assertThat(result).isEqualTo(1);
 
         verify(messagePublisher).publish(
-                event1.getDomainType(), event1.getType(), event1.getPayload()
+                event1.getDomainType(),
+                event1.getType(),
+                event1.getPayload()
         );
         verify(messagePublisher, never()).publish(
-                event2.getDomainType(), event2.getType(), event2.getPayload()
+                event2.getDomainType(),
+                event2.getType(),
+                event2.getPayload()
         );
         verify(messagePublisher).publish(
-                event3.getDomainType(), event3.getType(), event3.getPayload()
+                event3.getDomainType(),
+                event3.getType(),
+                event3.getPayload()
         );
 
-        verify(outboxPersistenceOutport).markPublishedDirectly(1L);
-        verify(outboxPersistenceOutport, never()).markPublishedDirectly(2L);
-        verify(outboxPersistenceOutport, never()).markPublishedDirectly(3L);
+        verify(outboxPublishTxFacade).completePublished(event1);
+        verify(outboxPublishTxFacade, never()).completePublished(event2);
+        verify(outboxPublishTxFacade, never()).completePublished(event3);
 
-        verify(outboxPersistenceOutport).markPendingAgainDirectly(3L);
+        verify(outboxPublishTxFacade).rollbackToPending(3L);
     }
 
     private OutboxEvent createOutboxEvent(Long id, OutboxStatus status) {

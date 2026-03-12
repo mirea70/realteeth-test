@@ -3,6 +3,7 @@ package com.realteeth.jpa.imagejob.repository;
 import java.time.LocalDateTime;
 
 public interface ImageJobJpaQueryRepository {
-    boolean markDispatching(Long imageJobId, LocalDateTime updateTime);
-    boolean reschedulePoll(Long imageJobId, LocalDateTime nextPollAt, LocalDateTime updateTime);
+    boolean markPublished(Long imageJobId, LocalDateTime updatedAt);
+    boolean markDispatching(Long imageJobId, LocalDateTime updatedAt);
+    boolean reschedulePoll(Long imageJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt);
 }

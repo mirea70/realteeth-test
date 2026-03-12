@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface ImageJobPersistenceOutport {
     Optional<ImageJob> loadOne(ImageJobId id);
     ImageJob insert(ImageJob imageJob);
+    boolean markPublishedDirectly(ImageJobId imageJobId, LocalDateTime updatedAt);
     boolean markDispatchingDirectly(ImageJobId imageJobId, LocalDateTime updatedAt);
     void update(ImageJob imageJob);
     boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt);

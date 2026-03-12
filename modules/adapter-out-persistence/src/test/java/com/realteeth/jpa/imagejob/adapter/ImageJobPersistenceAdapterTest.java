@@ -19,6 +19,80 @@ import static org.junit.jupiter.api.Assertions.*;
 class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
 
     @Test
+    @DisplayName("PUBLISH_PENDING 상태이면 PUBLISHED로 변경된다")
+    void markPublishedDirectly_success() {
+        // given
+        LocalDateTime createdAt = LocalDateTime.of(2026, 3, 12, 13, 0);
+
+        ImageJobJpaEntity entity = createImageJobEntity(
+                4L,
+                ImageJobStatus.PUBLISH_PENDING,
+                0,
+                createdAt
+        );
+
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
+
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 3, 12, 14, 0);
+
+        // when
+        boolean result = imageJobPersistenceAdapter.markPublishedDirectly(
+                new ImageJobId(4L),
+                updatedAt
+        );
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        assertThat(result).isTrue();
+
+        ImageJobJpaEntity saved = entityManager.find(ImageJobJpaEntity.class, 4L);
+        assertThat(saved.getStatus()).isEqualTo(ImageJobStatus.PUBLISHED.name());
+        assertThat(saved.getUpdatedAt()).isEqualTo(updatedAt);
+        assertThat(saved.getDispatchAttemptCount()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("PUBLISH_PENDING 상태가 아니면 PUBLISHED로 변경되지 않고 false를 반환한다")
+    void markPublishedDirectly_fail_whenStatusIsNotPublishPending() {
+        // given
+        LocalDateTime createdAt = LocalDateTime.of(2026, 3, 12, 13, 30);
+
+        ImageJobJpaEntity entity = createImageJobEntity(
+                5L,
+                ImageJobStatus.ACCEPTED,
+                0,
+                createdAt
+        );
+
+        entityManager.persist(entity);
+        entityManager.flush();
+        entityManager.clear();
+
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 3, 12, 14, 30);
+
+        // when
+        boolean result = imageJobPersistenceAdapter.markPublishedDirectly(
+                new ImageJobId(5L),
+                updatedAt
+        );
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        assertThat(result).isFalse();
+
+        ImageJobJpaEntity saved = entityManager.find(ImageJobJpaEntity.class, 5L);
+        assertThat(saved.getStatus()).isEqualTo(ImageJobStatus.ACCEPTED.name());
+        assertThat(saved.getUpdatedAt()).isEqualTo(createdAt);
+        assertThat(saved.getDispatchAttemptCount()).isEqualTo(0);
+    }
+
+    @Test
     @DisplayName("PUBLISHED 상태이면 DISPATCHING으로 변경되고 dispatchAttemptCount가 1 증가한다")
     void markDispatchingDirectly_success() {
         // given

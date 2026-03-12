@@ -14,6 +14,21 @@ public class ImageJobJpaQueryRepositoryImpl implements ImageJobJpaQueryRepositor
 
 
     @Override
+    public boolean markPublished(Long imageJobId, LocalDateTime updatedAt) {
+        long updated = queryFactory
+                .update(imageJob)
+                .set(imageJob.status, ImageJobStatus.PUBLISHED.name())
+                .set(imageJob.updatedAt, updatedAt)
+                .where(
+                        imageJob.imageJobId.eq(imageJobId),
+                        imageJob.status.eq(ImageJobStatus.PUBLISH_PENDING.name())
+                )
+                .execute();
+
+        return updated == 1L;
+    }
+
+    @Override
     public boolean markDispatching(Long imageJobId, LocalDateTime updatedAt) {
         long updated = queryFactory
                 .update(imageJob)

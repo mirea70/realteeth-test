@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class ImageJobService implements ImageJobUseCase {
     private final ImageJobPersistenceOutport imageJobPersistenceOutport;
@@ -37,6 +36,7 @@ public class ImageJobService implements ImageJobUseCase {
         return ImageJobResponse.from(imageJob);
     }
 
+    @Transactional
     public ImageJobResponse register(String sourceImageUrl) {
         Long imageJobIdValue = idGenerator.nextId();
         LocalDateTime now = LocalDateTime.now();
@@ -62,6 +62,7 @@ public class ImageJobService implements ImageJobUseCase {
                         now
                 )
         );
+
 
         return ImageJobResponse.from(result);
     }

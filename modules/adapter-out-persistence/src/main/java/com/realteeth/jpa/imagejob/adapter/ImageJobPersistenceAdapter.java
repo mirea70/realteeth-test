@@ -28,6 +28,14 @@ public class ImageJobPersistenceAdapter implements ImageJobPersistenceOutport {
     }
 
     @Override
+    public boolean markPublishedDirectly(ImageJobId imageJobId, LocalDateTime updatedAt) {
+        boolean result = imageJobJpaRepository.markPublished(imageJobId.getValue(), updatedAt);
+        entityManager.flush();
+        entityManager.clear();
+        return result;
+    }
+
+    @Override
     public Optional<ImageJob> loadOne(ImageJobId id) {
         return imageJobJpaRepository.findById(id.getValue())
                 .map(ImageJobJpaEntity::toDomain);
@@ -35,7 +43,10 @@ public class ImageJobPersistenceAdapter implements ImageJobPersistenceOutport {
 
     @Override
     public boolean markDispatchingDirectly(ImageJobId imageJobId, LocalDateTime updatedAt) {
-        return imageJobJpaRepository.markDispatching(imageJobId.getValue(), updatedAt);
+        boolean result = imageJobJpaRepository.markDispatching(imageJobId.getValue(), updatedAt);
+        entityManager.flush();
+        entityManager.clear();
+        return result;
     }
 
     @Transactional
@@ -48,6 +59,9 @@ public class ImageJobPersistenceAdapter implements ImageJobPersistenceOutport {
 
     @Override
     public boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt) {
-        return imageJobJpaRepository.reschedulePoll(imageJobId.getValue(), nextPollAt, updatedAt);
+        boolean result = imageJobJpaRepository.reschedulePoll(imageJobId.getValue(), nextPollAt, updatedAt);
+        entityManager.flush();
+        entityManager.clear();
+        return result;
     }
 }

@@ -4,6 +4,7 @@ dependencies {
     implementation project(":util")
     implementation project(":adapter-out-persistence")
     implementation project(":adapter-out-mq")
+    implementation project(':adapter-out-worker')
 
     // spring
     implementation 'org.springframework.boot:spring-boot-starter'

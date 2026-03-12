@@ -5,5 +5,5 @@ import com.realteeth.dto.worker.WorkerProcessingInfo;
 public interface WorkerOutport {
     String getApiKey();
     String processStart(String apiKey, String imageUrl);
-    WorkerProcessingInfo getProcessingInfo(String jobId);
+    WorkerProcessingInfo getProcessingInfo(String workerJobId);
 }

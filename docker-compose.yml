@@ -7,6 +7,8 @@ services:
       MYSQL_ROOT_PASSWORD: root
     ports:
       - "13306:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -14,33 +16,44 @@ services:
       - "5672:5672"
       - "15672:15672"
 
-#  api:
-#    build:
-#      context: .
-#      dockerfile: adapter-in-api/Dockerfile
-#    environment:
-#      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
-#      SPRING_DATASOURCE_USERNAME: app
-#      SPRING_DATASOURCE_PASSWORD: app
-#      SPRING_RABBITMQ_HOST: rabbitmq
-#    depends_on:
-#      - mysql
-#      - rabbitmq
-#    ports:
-#      - "8080:8080"
-#
-#  worker:
-#    build:
-#      context: .
-#      dockerfile: adapter-in-worker/Dockerfile
-#    environment:
-#      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
-#      SPRING_DATASOURCE_USERNAME: app
-#      SPRING_DATASOURCE_PASSWORD: app
-#      SPRING_RABBITMQ_HOST: rabbitmq
-#      MOCK_WORKER_BASE_URL: https://dev.realteeth.ai
-#      MOCK_WORKER_CANDIDATE_NAME: candidate
-#      MOCK_WORKER_EMAIL: candidate@example.com
-#    depends_on:
-#      - mysql
-#      - rabbitmq
+  api:
+    build:
+      context: .
+      args:
+        MODULE_NAME: adapter-in-api
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      - mysql
+      - rabbitmq
+    ports:
+      - "9090:9090"
+
+  worker:
+    build:
+      context: .
+      args:
+        MODULE_NAME: adapter-in-worker
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      - mysql
+      - rabbitmq
+    ports:
+      - "9091:9091"
+
+  batch:
+    build:
+      context: .
+      args:
+        MODULE_NAME: adapter-batch
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      - mysql
+      - rabbitmq
+    ports:
+      - "9092:9092"

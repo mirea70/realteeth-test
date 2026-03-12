@@ -2,6 +2,7 @@ package com.realteeth.port.out;
 
 import com.realteeth.imagejob.model.ImageJob;
 import com.realteeth.imagejob.model.ImageJobId;
+import com.realteeth.imagejob.model.ImageJobStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,4 +16,5 @@ public interface ImageJobPersistenceOutport {
     boolean markDispatchingDirectly(ImageJobId imageJobId, LocalDateTime updatedAt);
     void update(ImageJob imageJob);
     boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime updatedAt);
+    List<ImageJob> findStuckJobs(ImageJobStatus status, LocalDateTime threshold);
 }

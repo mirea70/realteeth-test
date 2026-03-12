@@ -246,6 +246,46 @@ class ImageJobDelegateServiceDispatchTest {
         assertThat(dispatchingImageJob.getWorkerJobId()).isEqualTo("worker-job-123");
     }
 
+    @Test
+    @DisplayName("dispatchAttemptCount가 5를 초과하면 FAILED로 상태를 변경하고 처리를 중단한다")
+    void dispatch_fail_whenMaxAttemptExceeded() {
+        Long imageJobId = 1L;
+        LocalDateTime createdAt = LocalDateTime.of(2026, 3, 11, 10, 0);
+
+        ImageJob publishedImageJob = getImageJob(imageJobId, "https://example.com/image.jpg", ImageJobStatus.PUBLISHED, createdAt);
+        ImageJob exceededImageJob = ImageJob.fromOutside(
+                imageJobId,
+                "https://example.com/image.jpg",
+                ImageJobStatus.DISPATCHING.name(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                6,
+                0,
+                createdAt,
+                createdAt
+        );
+
+        given(imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId)))
+                .willReturn(Optional.of(publishedImageJob), Optional.of(exceededImageJob));
+        given(imageJobPersistenceOutport.markDispatchingDirectly(eq(new ImageJobId(imageJobId)), any(LocalDateTime.class)))
+                .willReturn(true);
+
+        imageJobDelegateService.dispatch(imageJobId);
+
+        then(imageJobPersistenceOutport).should(times(2)).loadOne(new ImageJobId(imageJobId));
+        then(imageJobPersistenceOutport).should().update(exceededImageJob);
+        then(workerOutport).shouldHaveNoInteractions();
+        then(outboxPersistenceOutport).shouldHaveNoInteractions();
+
+        assertThat(exceededImageJob.getStatus()).isEqualTo(ImageJobStatus.FAILED);
+        assertThat(exceededImageJob.getFailure()).isNotNull();
+        assertThat(exceededImageJob.getFailure().getMessage()).isEqualTo("최대 작업 위임 시도 횟수 초과");
+    }
+
     private ImageJob getImageJob(Long id, String sourceImageUrl, ImageJobStatus status, LocalDateTime now) {
         return ImageJob.fromOutside(
                 id,

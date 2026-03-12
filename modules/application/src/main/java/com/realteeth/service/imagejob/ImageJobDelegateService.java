@@ -46,15 +46,21 @@ public class ImageJobDelegateService {
             return;
         }
 
-        // MockWorker에 작업 위임
-        String workerJobId = startWorkerOrHandleFailure(imageJobId, imageJob, now);
-        if(workerJobId == null){
+        // 작업 정보 다시 가져오기 (이 시점에 DB상 카운트는 증가됨)
+        ImageJob dispatchingImageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
+                .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
+
+        if (dispatchingImageJob.getDispatchAttemptCount() > 5) {
+            dispatchingImageJob.markFailed(500, "최대 작업 위임 시도 횟수 초과", now);
+            imageJobPersistenceOutport.update(dispatchingImageJob);
             return;
         }
 
-        // 작업 정보 다시 가져오기
-        ImageJob dispatchingImageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
-                .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
+        // MockWorker에 작업 위임
+        String workerJobId = startWorkerOrHandleFailure(dispatchingImageJob, now);
+        if(workerJobId == null){
+            return;
+        }
 
         // Processing으로 변경
         dispatchingImageJob.markProcessing(workerJobId, now);
@@ -107,6 +113,12 @@ public class ImageJobDelegateService {
 
         switch (processingInfo.status()) {
             case "PROCESSING" -> {
+                if (imageJob.getPollAttemptCount() >= 5) {
+                    imageJob.markFailed(500, "최대 상태 확인 시도 횟수 초과", now);
+                    imageJobPersistenceOutport.update(imageJob);
+                    return;
+                }
+
                 LocalDateTime nextPollAt = now.plus(pollDelay);
 
                 boolean claimed = imageJobPersistenceOutport.reschedulePoll(imageJob.getId(), now);
@@ -144,7 +156,7 @@ public class ImageJobDelegateService {
         }
     }
 
-    private String startWorkerOrHandleFailure(Long imageJobId, ImageJob imageJob, LocalDateTime now) {
+    private String startWorkerOrHandleFailure(ImageJob imageJob, LocalDateTime now) {
         try {
             String apiKey = workerOutport.getApiKey();
             return workerOutport.processStart(apiKey, imageJob.getSourceImageUrl());
@@ -153,11 +165,8 @@ public class ImageJobDelegateService {
                 throw e;
             }
 
-            ImageJob dispatchingImageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
-                    .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
-
-            dispatchingImageJob.markFailed(extractFailureCode(e), e.getMessage(), now);
-            imageJobPersistenceOutport.update(dispatchingImageJob);
+            imageJob.markFailed(extractFailureCode(e), e.getMessage(), now);
+            imageJobPersistenceOutport.update(imageJob);
             return null;
         }
     }

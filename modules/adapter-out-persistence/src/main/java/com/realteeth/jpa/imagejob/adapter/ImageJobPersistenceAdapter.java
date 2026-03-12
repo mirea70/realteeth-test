@@ -4,6 +4,7 @@ import com.realteeth.error.exception.BusinessException;
 import com.realteeth.error.info.SystemErrorInfo;
 import com.realteeth.imagejob.model.ImageJob;
 import com.realteeth.imagejob.model.ImageJobId;
+import com.realteeth.imagejob.model.ImageJobStatus;
 import com.realteeth.jpa.imagejob.entity.ImageJobJpaEntity;
 import com.realteeth.jpa.imagejob.repository.ImageJobJpaRepository;
 import com.realteeth.port.out.ImageJobPersistenceOutport;
@@ -70,7 +71,16 @@ public class ImageJobPersistenceAdapter implements ImageJobPersistenceOutport {
     public boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime updatedAt) {
         boolean result = imageJobJpaRepository.reschedulePoll(imageJobId.getValue(), updatedAt);
         entityManager.flush();
+        entityManager.flush();
         entityManager.clear();
         return result;
+    }
+
+    @Override
+    public List<ImageJob> findStuckJobs(ImageJobStatus status, LocalDateTime threshold) {
+        return imageJobJpaRepository.findStuckJobs(status, threshold)
+                .stream()
+                .map(ImageJobJpaEntity::toDomain)
+                .toList();
     }
 }

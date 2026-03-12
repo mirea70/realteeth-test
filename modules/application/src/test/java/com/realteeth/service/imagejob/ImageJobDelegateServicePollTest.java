@@ -175,6 +175,43 @@ class ImageJobDelegateServicePollTest {
     }
 
     @Test
+    @DisplayName("Worker 상태가 PROCESSING이나 pollAttemptCount가 5 이상이면 FAILED로 갱신하고 종료한다")
+    void poll_fail_whenProcessingAndMaxAttemptExceeded() {
+        Long imageJobId = 1L;
+        LocalDateTime now = LocalDateTime.of(2026, 3, 11, 10, 0);
+
+        ImageJob processingImageJob = ImageJob.fromOutside(
+                imageJobId,
+                "https://example.com/image.jpg",
+                ImageJobStatus.PROCESSING.name(),
+                "worker-job-123",
+                null,
+                null,
+                null,
+                null,
+                null,
+                0,
+                5,
+                now,
+                now
+        );
+
+        given(imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId)))
+                .willReturn(Optional.of(processingImageJob));
+        given(workerOutport.getProcessingInfo("worker-job-123"))
+                .willReturn(new WorkerProcessingInfo("worker-job-123", "PROCESSING", null, null));
+
+        imageJobDelegateService.poll(imageJobId, "worker-job-123");
+
+        then(imageJobPersistenceOutport).should().update(processingImageJob);
+        then(outboxPersistenceOutport).shouldHaveNoInteractions();
+
+        assertThat(processingImageJob.getStatus()).isEqualTo(ImageJobStatus.FAILED);
+        assertThat(processingImageJob.getFailure()).isNotNull();
+        assertThat(processingImageJob.getFailure().getMessage()).isEqualTo("최대 상태 확인 시도 횟수 초과");
+    }
+
+    @Test
     @DisplayName("Worker 상태가 PROCESSING이어도 선점 실패하면 Poll 이벤트를 저장하지 않는다")
     void poll_return_whenProcessingAndClaimFailed() {
         Long imageJobId = 1L;

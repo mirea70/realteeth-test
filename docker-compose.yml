@@ -9,6 +9,11 @@ services:
       - "13306:3306"
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -25,8 +30,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
       SPRING_RABBITMQ_HOST: rabbitmq
     depends_on:
-      - mysql
-      - rabbitmq
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    restart: on-failure
     ports:
       - "9090:9090"
 
@@ -39,8 +47,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
       SPRING_RABBITMQ_HOST: rabbitmq
     depends_on:
-      - mysql
-      - rabbitmq
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    restart: on-failure
     ports:
       - "9091:9091"
 
@@ -53,7 +64,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/realteeth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
       SPRING_RABBITMQ_HOST: rabbitmq
     depends_on:
-      - mysql
-      - rabbitmq
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    restart: on-failure
     ports:
       - "9092:9092"

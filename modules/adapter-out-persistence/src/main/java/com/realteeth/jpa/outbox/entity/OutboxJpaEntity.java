@@ -40,6 +40,9 @@ public class OutboxJpaEntity {
 
     private LocalDateTime publishedAt;
 
+    @Column(nullable = false)
+    private LocalDateTime availableAt;
+
     public static OutboxJpaEntity from(OutboxEvent outboxEvent) {
         return new OutboxJpaEntity(
                 outboxEvent.getId(),
@@ -49,7 +52,8 @@ public class OutboxJpaEntity {
                 outboxEvent.getPayload(),
                 outboxEvent.getStatus().name(),
                 outboxEvent.getCreatedAt(),
-                outboxEvent.getPublishedAt()
+                outboxEvent.getPublishedAt(),
+                outboxEvent.getAvailableAt()
         );
     }
 
@@ -62,7 +66,8 @@ public class OutboxJpaEntity {
                 payload,
                 OutboxStatus.from(status),
                 createdAt,
-                publishedAt
+                publishedAt,
+                availableAt
         );
     }
 }

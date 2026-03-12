@@ -154,7 +154,7 @@ class ImageJobDelegateServicePollTest {
                 .willReturn(Optional.of(processingImageJob));
         given(workerOutport.getProcessingInfo("worker-job-123"))
                 .willReturn(new WorkerProcessingInfo("worker-job-123", "PROCESSING", null, null));
-        given(imageJobPersistenceOutport.reschedulePoll(eq(new ImageJobId(imageJobId)), any(LocalDateTime.class), any(LocalDateTime.class)))
+        given(imageJobPersistenceOutport.reschedulePoll(eq(new ImageJobId(imageJobId)), any(LocalDateTime.class)))
                 .willReturn(true);
         given(idGenerator.nextId()).willReturn(outboxEventId);
         given(dataSerializerOutPort.serialize(any(WorkerPollEventPayload.class)))
@@ -162,7 +162,7 @@ class ImageJobDelegateServicePollTest {
 
         imageJobDelegateService.poll(imageJobId, "worker-job-123");
 
-        then(imageJobPersistenceOutport).should().reschedulePoll(eq(new ImageJobId(imageJobId)), any(LocalDateTime.class), any(LocalDateTime.class));
+        then(imageJobPersistenceOutport).should().reschedulePoll(eq(new ImageJobId(imageJobId)), any(LocalDateTime.class));
 
         ArgumentCaptor<OutboxEvent> outboxEventCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
         then(outboxPersistenceOutport).should().insert(outboxEventCaptor.capture());
@@ -186,7 +186,7 @@ class ImageJobDelegateServicePollTest {
                 .willReturn(Optional.of(processingImageJob));
         given(workerOutport.getProcessingInfo("worker-job-123"))
                 .willReturn(new WorkerProcessingInfo("worker-job-123", "PROCESSING", null, null));
-        given(imageJobPersistenceOutport.reschedulePoll(eq(new ImageJobId(imageJobId)), any(LocalDateTime.class), any(LocalDateTime.class)))
+        given(imageJobPersistenceOutport.reschedulePoll(eq(new ImageJobId(imageJobId)), any(LocalDateTime.class)))
                 .willReturn(false);
 
         imageJobDelegateService.poll(imageJobId, "worker-job-123");
@@ -269,7 +269,6 @@ class ImageJobDelegateServicePollTest {
                 null,
                 0,
                 0,
-                null,
                 now,
                 now
         );

@@ -264,6 +264,7 @@ class OutboxPublishServiceTest {
                 "{\"jobId\":" + id + "}",
                 status,
                 LocalDateTime.now(),
+                LocalDateTime.now(),
                 null
         );
     }

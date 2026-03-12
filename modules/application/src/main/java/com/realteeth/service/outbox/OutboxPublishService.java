@@ -2,7 +2,6 @@ package com.realteeth.service.outbox;
 
 import com.realteeth.outbox.OutboxEvent;
 import com.realteeth.port.in.OutboxPublishUseCase;
-import com.realteeth.port.out.ImageJobPersistenceOutport;
 import com.realteeth.port.out.MessagePublisher;
 import com.realteeth.port.out.OutboxPersistenceOutport;
 import lombok.RequiredArgsConstructor;

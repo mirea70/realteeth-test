@@ -45,11 +45,10 @@ public class ImageJobJpaQueryRepositoryImpl implements ImageJobJpaQueryRepositor
     }
 
     @Override
-    public boolean reschedulePoll(Long imageJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt) {
+    public boolean reschedulePoll(Long imageJobId, LocalDateTime updatedAt) {
         long updated = queryFactory
                 .update(imageJob)
                 .set(imageJob.pollAttemptCount, imageJob.pollAttemptCount.add(1))
-                .set(imageJob.nextPollAt, nextPollAt)
                 .set(imageJob.updatedAt, updatedAt)
                 .where(
                         imageJob.imageJobId.eq(imageJobId),

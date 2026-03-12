@@ -222,7 +222,6 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
     void reschedulePoll_success() {
         // given
         LocalDateTime createdAt = LocalDateTime.of(2026, 3, 12, 10, 0);
-        LocalDateTime nextPollAt = createdAt.plusMinutes(5);
         LocalDateTime updatedAt = createdAt.plusMinutes(1);
 
         ImageJobJpaEntity entity = createImageJobEntity(
@@ -239,7 +238,6 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         // when
         boolean result = imageJobPersistenceAdapter.reschedulePoll(
                 new ImageJobId(1L),
-                nextPollAt,
                 updatedAt
         );
 
@@ -253,7 +251,6 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
 
         assertEquals(1, updated.getDispatchAttemptCount());
         assertEquals(1, updated.getPollAttemptCount()); // 기존 0 -> 1
-        assertEquals(nextPollAt, updated.getNextPollAt());
         assertEquals(updatedAt, updated.getUpdatedAt());
     }
 
@@ -262,7 +259,6 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
     void reschedulePoll_fail_whenNotProcessing() {
         // given
         LocalDateTime createdAt = LocalDateTime.of(2026, 3, 12, 10, 0);
-        LocalDateTime nextPollAt = createdAt.plusMinutes(5);
         LocalDateTime updatedAt = createdAt.plusMinutes(1);
 
         ImageJobJpaEntity entity = createImageJobEntity(
@@ -279,7 +275,6 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         // when
         boolean result = imageJobPersistenceAdapter.reschedulePoll(
                 new ImageJobId(2L),
-                nextPollAt,
                 updatedAt
         );
 
@@ -292,7 +287,6 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
         ImageJobJpaEntity notUpdated = entityManager.find(ImageJobJpaEntity.class, 2L);
 
         assertEquals(0, notUpdated.getPollAttemptCount());
-        assertNull(notUpdated.getNextPollAt());
         assertEquals(createdAt, notUpdated.getUpdatedAt());
     }
 
@@ -300,13 +294,11 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
     @DisplayName("reschedulePoll - 존재하지 않는 ImageJob이면 false 반환")
     void reschedulePoll_fail_whenNotExist() {
         // given
-        LocalDateTime nextPollAt = LocalDateTime.now();
         LocalDateTime updatedAt = LocalDateTime.now();
 
         // when
         boolean result = imageJobPersistenceAdapter.reschedulePoll(
                 new ImageJobId(999L),
-                nextPollAt,
                 updatedAt
         );
 
@@ -405,7 +397,6 @@ class ImageJobPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 null,
                 2,
                 0,
-                null,
                 createdAt,
                 updatedAt
         );

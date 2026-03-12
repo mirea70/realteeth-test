@@ -27,6 +27,8 @@ public class OutboxEvent {
 
     private LocalDateTime publishedAt;
 
+    private LocalDateTime availableAt;
+
     public static OutboxEvent createNew(Long id, DomainType domainType, Long domainId, OutboxEventType type, String payload, LocalDateTime now) {
         return new OutboxEvent(
                 id,
@@ -36,11 +38,26 @@ public class OutboxEvent {
                 payload,
                 OutboxStatus.PENDING,
                 now,
-                null
+                null,
+                now
         );
     }
 
-    public static OutboxEvent fromOutside(Long id, DomainType domainType, Long domainId, OutboxEventType type, String payload, OutboxStatus status, LocalDateTime createdAt, LocalDateTime publishedAt) {
+    public static OutboxEvent createScheduled(Long id, DomainType domainType, Long domainId, OutboxEventType type, String payload, LocalDateTime now, LocalDateTime availableAt) {
+        return new OutboxEvent(
+                id,
+                domainType,
+                domainId,
+                type,
+                payload,
+                OutboxStatus.PENDING,
+                now,
+                null,
+                availableAt
+        );
+    }
+
+    public static OutboxEvent fromOutside(Long id, DomainType domainType, Long domainId, OutboxEventType type, String payload, OutboxStatus status, LocalDateTime createdAt, LocalDateTime publishedAt, LocalDateTime availableAt) {
         return new OutboxEvent(
                 id,
                 domainType,
@@ -49,7 +66,8 @@ public class OutboxEvent {
                 payload,
                 status,
                 createdAt,
-                publishedAt
+                publishedAt,
+                availableAt != null ? availableAt : createdAt
         );
     }
 

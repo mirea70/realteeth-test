@@ -47,8 +47,6 @@ public class ImageJobJpaEntity {
     @Column(nullable = false)
     private Integer pollAttemptCount;
 
-    private LocalDateTime nextPollAt;
-
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
@@ -66,7 +64,6 @@ public class ImageJobJpaEntity {
         this.failedAt = failedAt;
         this.dispatchAttemptCount = dispatchAttemptCount;
         this.pollAttemptCount = pollAttemptCount;
-        this.nextPollAt = nextPollAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -87,7 +84,6 @@ public class ImageJobJpaEntity {
                 .failedAt(imageJobFailure != null ? imageJobFailure.getFailedAt() : null)
                 .dispatchAttemptCount(imageJob.getDispatchAttemptCount())
                 .pollAttemptCount(imageJob.getPollAttemptCount())
-                .nextPollAt(imageJob.getNextPollAt())
                 .createdAt(imageJob.getCreatedAt())
                 .updatedAt(imageJob.getUpdatedAt())
                 .build();
@@ -110,7 +106,6 @@ public class ImageJobJpaEntity {
 
         this.dispatchAttemptCount = imageJob.getDispatchAttemptCount();
         this.pollAttemptCount = imageJob.getPollAttemptCount();
-        this.nextPollAt = imageJob.getNextPollAt();
 
         this.createdAt = imageJob.getCreatedAt();
         this.updatedAt = imageJob.getUpdatedAt();
@@ -129,7 +124,6 @@ public class ImageJobJpaEntity {
                 failedAt,
                 dispatchAttemptCount,
                 pollAttemptCount,
-                nextPollAt,
                 createdAt,
                 updatedAt
         );

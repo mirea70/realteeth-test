@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ImageJobDelegateService {
 
-    private static final Duration pollDelay = Duration.ofSeconds(5);
+    private static final Duration pollDelay = Duration.ofSeconds(40);
 
     private final ImageJobPersistenceOutport imageJobPersistenceOutport;
     private final OutboxPersistenceOutport outboxPersistenceOutport;
@@ -57,12 +57,12 @@ public class ImageJobDelegateService {
                 .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
 
         // Processing으로 변경
-        dispatchingImageJob.markProcessing(workerJobId, now.plus(pollDelay), now);
+        dispatchingImageJob.markProcessing(workerJobId, now);
         imageJobPersistenceOutport.update(dispatchingImageJob);
 
         // Poll 이벤트 발행
         outboxPersistenceOutport.insert(
-                OutboxEvent.createNew(
+                OutboxEvent.createScheduled(
                         idGenerator.nextId(),
                         DomainType.IMAGE_JOB,
                         imageJobId,
@@ -73,7 +73,8 @@ public class ImageJobDelegateService {
                                         workerJobId
                                 )
                         ),
-                        now
+                        now,
+                        now.plus(pollDelay)
                 )
         );
     }
@@ -106,13 +107,15 @@ public class ImageJobDelegateService {
 
         switch (processingInfo.status()) {
             case "PROCESSING" -> {
-                boolean claimed = imageJobPersistenceOutport.reschedulePoll(imageJob.getId(), now.plus(pollDelay), now);
+                LocalDateTime nextPollAt = now.plus(pollDelay);
+
+                boolean claimed = imageJobPersistenceOutport.reschedulePoll(imageJob.getId(), now);
                 if (!claimed){
                     return;
                 }
                 // 다음 Poll 예약
                 outboxPersistenceOutport.insert(
-                        OutboxEvent.createNew(
+                        OutboxEvent.createScheduled(
                                 idGenerator.nextId(),
                                 DomainType.IMAGE_JOB,
                                 imageJobId,
@@ -120,9 +123,11 @@ public class ImageJobDelegateService {
                                 dataSerializerOutPort.serialize(
                                         new WorkerPollEventPayload(
                                                 imageJobId,
-                                                processingInfo.jobId())
+                                                processingInfo.jobId()
+                                                )
                                 ),
-                                now
+                                now,
+                                nextPollAt
                         )
                 );
             }
@@ -155,18 +160,6 @@ public class ImageJobDelegateService {
             imageJobPersistenceOutport.update(dispatchingImageJob);
             return null;
         }
-    }
-
-    private void handleDispatchFailure(Long imageJobId, BusinessException e, LocalDateTime now) {
-        if (e.isRetryable()) {
-            throw e;
-        }
-
-        ImageJob dispatchingImageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
-                .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
-
-        dispatchingImageJob.markFailed(extractFailureCode(e), e.getMessage(), now);
-        imageJobPersistenceOutport.update(dispatchingImageJob);
     }
 
     private int extractFailureCode(BusinessException e) {

@@ -4,10 +4,8 @@ import com.realteeth.error.exception.DomainException;
 import com.realteeth.error.info.ImageJobErrorInfo;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 import static com.realteeth.imagejob.model.ImageJobStatus.*;
@@ -23,7 +21,6 @@ public class ImageJob {
     private ImageJobFailure failure;
     private Integer dispatchAttemptCount;
     private Integer pollAttemptCount;
-    private LocalDateTime nextPollAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -37,13 +34,12 @@ public class ImageJob {
                 null,
                 0,
                 0,
-                null,
                 now,
                 now
         );
     }
 
-    public static ImageJob fromOutside(Long id, String sourceImageUrl, String status, String workerJobId, String resultImageUrl, LocalDateTime resultAt, Integer failureCode, String failureMessage, LocalDateTime failAt, Integer dispatchAttemptCount, Integer pollAttemptCount, LocalDateTime nextPollAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public static ImageJob fromOutside(Long id, String sourceImageUrl, String status, String workerJobId, String resultImageUrl, LocalDateTime resultAt, Integer failureCode, String failureMessage, LocalDateTime failAt, Integer dispatchAttemptCount, Integer pollAttemptCount, LocalDateTime createdAt, LocalDateTime updatedAt) {
         return new ImageJob(
                 new ImageJobId(id),
                 sourceImageUrl,
@@ -53,7 +49,6 @@ public class ImageJob {
                 ImageJobFailure.of(failureCode, failureMessage, failAt),
                 dispatchAttemptCount,
                 pollAttemptCount,
-                nextPollAt,
                 createdAt,
                 updatedAt
         );
@@ -63,10 +58,9 @@ public class ImageJob {
         transitionTo(PUBLISH_PENDING, updatedAt);
     }
 
-    public void markProcessing(String workerJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt) {
+    public void markProcessing(String workerJobId, LocalDateTime updatedAt) {
         transitionTo(PROCESSING, updatedAt);
         this.workerJobId = workerJobId;
-        this.nextPollAt = nextPollAt;
     }
 
     public void markSucceeded(String resultImageUrl, LocalDateTime updatedAt) {

@@ -4,6 +4,7 @@ import com.realteeth.error.exception.BusinessException;
 import com.realteeth.error.info.CommonDomainErrorInfo;
 import com.realteeth.imagejob.model.ImageJobId;
 import com.realteeth.outbox.OutboxEvent;
+import com.realteeth.outbox.OutboxEventType;
 import com.realteeth.port.out.ImageJobPersistenceOutport;
 import com.realteeth.port.out.OutboxPersistenceOutport;
 import lombok.RequiredArgsConstructor;
@@ -30,13 +31,14 @@ public class OutboxPublishTxFacade {
 
         LocalDateTime now = LocalDateTime.now();
 
-        boolean imageJobMarked = imageJobPersistenceOutport.markPublishedDirectly(
-                new ImageJobId(event.getDomainId())
-                , now
-        );
+        if (event.getType() == OutboxEventType.DISPATCH) {
+            boolean imageJobMarked = imageJobPersistenceOutport.markPublishedDirectly(
+                    new ImageJobId(event.getDomainId()), now);
 
-        if (!imageJobMarked) {
-            throw new BusinessException(CommonDomainErrorInfo.OUTBOX_PUBLISH_TRANSACTION_FAIL);
+            if (!imageJobMarked) {
+                log.info("ImageJob {} 상태 변경 실패 (이미 처리되었거나 다른 상태일 수 있음). outboxEventId={}", event.getDomainId(),
+                        event.getId());
+            }
         }
 
         return true;

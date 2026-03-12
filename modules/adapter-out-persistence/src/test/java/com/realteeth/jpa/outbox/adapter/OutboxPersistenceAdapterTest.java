@@ -31,6 +31,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .status(OutboxStatus.PENDING.name())
                 .createdAt(now)
                 .publishedAt(null)
+                .availableAt(now)
                 .build();
 
         Long outboxId2 = 2L;
@@ -44,6 +45,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .status(OutboxStatus.PUBLISHED.name())
                 .createdAt(now)
                 .publishedAt(null)
+                .availableAt(now)
                 .build();
 
         entityManager.persist(outboxJpaEntity1);
@@ -74,6 +76,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .status(OutboxStatus.PENDING.name())
                 .createdAt(createdAt)
                 .publishedAt(null)
+                .availableAt(LocalDateTime.now())
                 .build();
 
         entityManager.persist(entity);
@@ -107,6 +110,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .status(OutboxStatus.PUBLISHED.name())
                 .createdAt(LocalDateTime.now().minusMinutes(1))
                 .publishedAt(null)
+                .availableAt(LocalDateTime.now())
                 .build();
 
         entityManager.persist(entity);
@@ -139,6 +143,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .status(OutboxStatus.PUBLISHING.name())
                 .createdAt(LocalDateTime.now().minusMinutes(2))
                 .publishedAt(null)
+                .availableAt(LocalDateTime.now())
                 .build();
 
         entityManager.persist(entity);
@@ -172,6 +177,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .status(OutboxStatus.PENDING.name())
                 .createdAt(LocalDateTime.now().minusMinutes(2))
                 .publishedAt(null)
+                .availableAt(LocalDateTime.now())
                 .build();
 
         entityManager.persist(entity);
@@ -205,6 +211,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .status(OutboxStatus.PUBLISHING.name())
                 .createdAt(LocalDateTime.now().minusMinutes(3))
                 .publishedAt(null)
+                .availableAt(LocalDateTime.now())
                 .build();
 
         entityManager.persist(entity);
@@ -238,6 +245,7 @@ class OutboxPersistenceAdapterTest extends PersistenceAdapterJpaTestSupport {
                 .status(OutboxStatus.PUBLISHED.name())
                 .createdAt(LocalDateTime.now().minusMinutes(3))
                 .publishedAt(null)
+                .availableAt(LocalDateTime.now())
                 .build();
 
         entityManager.persist(entity);

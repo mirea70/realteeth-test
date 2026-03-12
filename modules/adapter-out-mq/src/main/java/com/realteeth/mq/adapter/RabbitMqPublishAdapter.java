@@ -17,10 +17,12 @@ public class RabbitMqPublishAdapter implements MessagePublisher {
 
     public void publish(DomainType domainType, OutboxEventType eventType, String payload) {
         try {
+            log.info("[RabbitMqPublishAdapter] publish start... exchange={}, domainType={}, eventType={}, payload={}",
+                    RabbitMqConfig.EXCHANGE, domainType, eventType, payload);
             String routingKey = domainType.name() + "_" + eventType.name();
             rabbitTemplate.convertAndSend(RabbitMqConfig.EXCHANGE, routingKey, payload);
         } catch (Exception e) {
-            log.error("RabbitMQ publish failed. exchange={}, domainType={}, eventType={}, payload={}",
+            log.error("RabbitMQ에 메시지 발행 실패 exchange={}, domainType={}, eventType={}, payload={}",
                     RabbitMqConfig.EXCHANGE, domainType, eventType, payload, e);
             throw e;
         }

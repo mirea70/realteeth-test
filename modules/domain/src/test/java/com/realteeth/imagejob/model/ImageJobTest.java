@@ -38,8 +38,6 @@ class ImageJobTest {
         assertThat(imageJob.getDispatchAttemptCount()).isZero();
         assertThat(imageJob.getPollAttemptCount()).isZero();
 
-        assertThat(imageJob.getNextPollAt()).isNull();
-
         assertThat(imageJob.getCreatedAt()).isEqualTo(now);
         assertThat(imageJob.getUpdatedAt()).isEqualTo(now);
     }
@@ -89,7 +87,6 @@ class ImageJobTest {
                 null,
                 0,
                 0,
-                null,
                 now,
                 now
         );
@@ -105,7 +102,6 @@ class ImageJobTest {
         // given
         LocalDateTime createdAt = LocalDateTime.of(2026, 3, 12, 10, 0);
         LocalDateTime updatedAt = LocalDateTime.of(2026, 3, 12, 10, 5);
-        LocalDateTime nextPollAt = LocalDateTime.of(2026, 3, 12, 10, 10);
 
         ImageJob imageJob = ImageJob.fromOutside(
                 1L,
@@ -119,18 +115,16 @@ class ImageJobTest {
                 null,
                 0,
                 0,
-                null,
                 createdAt,
                 createdAt
         );
 
         // when
-        imageJob.markProcessing("worker-job-123", nextPollAt, updatedAt);
+        imageJob.markProcessing("worker-job-123", updatedAt);
 
         // then
         assertEquals(PROCESSING, imageJob.getStatus());
         assertEquals("worker-job-123", imageJob.getWorkerJobId());
-        assertEquals(nextPollAt, imageJob.getNextPollAt());
         assertEquals(updatedAt, imageJob.getUpdatedAt());
     }
 
@@ -152,14 +146,13 @@ class ImageJobTest {
                 null,
                 0,
                 0,
-                null,
                 now,
                 now
         );
 
         // when & then
         assertThrows(DomainException.class,
-                () -> imageJob.markProcessing("worker-job-123", now.plusSeconds(5), now));
+                () -> imageJob.markProcessing("worker-job-123", now));
     }
 
     @Test
@@ -182,7 +175,6 @@ class ImageJobTest {
                 null,
                 1,
                 0,
-                processingAt.plusSeconds(5),
                 createdAt,
                 processingAt
         );
@@ -216,7 +208,6 @@ class ImageJobTest {
                 null,
                 0,
                 0,
-                null,
                 now,
                 now
         );
@@ -245,7 +236,6 @@ class ImageJobTest {
                 null,
                 1,
                 2,
-                createdAt.plusSeconds(5),
                 createdAt,
                 createdAt.plusMinutes(1)
         );
@@ -280,7 +270,6 @@ class ImageJobTest {
                 null,
                 0,
                 0,
-                null,
                 now,
                 now
         );
@@ -313,7 +302,6 @@ class ImageJobTest {
                 null,
                 0,
                 0,
-                null,
                 now,
                 now
         );
@@ -341,7 +329,6 @@ class ImageJobTest {
                 null,
                 0,
                 0,
-                null,
                 now,
                 now
         );
@@ -371,7 +358,6 @@ class ImageJobTest {
                 null,
                 1,
                 1,
-                now.plusSeconds(5),
                 now,
                 now
         );

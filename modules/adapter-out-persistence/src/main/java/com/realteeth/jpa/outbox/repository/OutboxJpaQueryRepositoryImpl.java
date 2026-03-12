@@ -19,7 +19,10 @@ public class OutboxJpaQueryRepositoryImpl implements OutboxJpaQueryRepository {
     public List<OutboxJpaEntity> findOnPending(PageRequest pageRequest) {
         return queryFactory
                 .selectFrom(outboxEvent)
-                .where(outboxEvent.status.eq(OutboxStatus.PENDING.name()))
+                .where(
+                        outboxEvent.status.eq(OutboxStatus.PENDING.name()),
+                        outboxEvent.availableAt.loe(LocalDateTime.now())
+                )
                 .orderBy(outboxEvent.createdAt.asc())
                 .offset(pageRequest.getOffset())
                 .limit(pageRequest.getPageSize())

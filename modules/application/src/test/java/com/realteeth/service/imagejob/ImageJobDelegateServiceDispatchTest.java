@@ -244,7 +244,6 @@ class ImageJobDelegateServiceDispatchTest {
 
         assertThat(dispatchingImageJob.getStatus()).isEqualTo(ImageJobStatus.PROCESSING);
         assertThat(dispatchingImageJob.getWorkerJobId()).isEqualTo("worker-job-123");
-        assertThat(dispatchingImageJob.getNextPollAt()).isNotNull();
     }
 
     private ImageJob getImageJob(Long id, String sourceImageUrl, ImageJobStatus status, LocalDateTime now) {
@@ -260,7 +259,6 @@ class ImageJobDelegateServiceDispatchTest {
                 null,
                 0,
                 0,
-                null,
                 now,
                 now
         );

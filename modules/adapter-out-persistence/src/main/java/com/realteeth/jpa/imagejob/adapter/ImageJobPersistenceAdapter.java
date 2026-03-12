@@ -67,8 +67,8 @@ public class ImageJobPersistenceAdapter implements ImageJobPersistenceOutport {
     }
 
     @Override
-    public boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime nextPollAt, LocalDateTime updatedAt) {
-        boolean result = imageJobJpaRepository.reschedulePoll(imageJobId.getValue(), nextPollAt, updatedAt);
+    public boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime updatedAt) {
+        boolean result = imageJobJpaRepository.reschedulePoll(imageJobId.getValue(), updatedAt);
         entityManager.flush();
         entityManager.clear();
         return result;

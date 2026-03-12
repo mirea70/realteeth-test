@@ -71,6 +71,13 @@ public class ImageJobPersistenceAdapter implements ImageJobPersistenceOutport {
     public boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime updatedAt) {
         boolean result = imageJobJpaRepository.reschedulePoll(imageJobId.getValue(), updatedAt);
         entityManager.flush();
+        entityManager.clear();
+        return result;
+    }
+
+    @Override
+    public boolean markRecoveredToPendingDirectly(ImageJobId imageJobId, ImageJobStatus expectedStatus, LocalDateTime updatedAt) {
+        boolean result = imageJobJpaRepository.markRecoveredToPending(imageJobId.getValue(), expectedStatus, updatedAt);
         entityManager.flush();
         entityManager.clear();
         return result;

@@ -10,5 +10,6 @@ public interface ImageJobJpaQueryRepository {
     boolean markPublished(Long imageJobId, LocalDateTime updatedAt);
     boolean markDispatching(Long imageJobId, LocalDateTime updatedAt);
     boolean reschedulePoll(Long imageJobId, LocalDateTime updatedAt);
+    boolean markRecoveredToPending(Long imageJobId, ImageJobStatus expectedStatus, LocalDateTime updatedAt);
     List<ImageJobJpaEntity> findStuckJobs(ImageJobStatus status, LocalDateTime threshold);
 }

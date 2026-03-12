@@ -62,6 +62,21 @@ public class ImageJobJpaQueryRepositoryImpl implements ImageJobJpaQueryRepositor
     }
 
     @Override
+    public boolean markRecoveredToPending(Long imageJobId, ImageJobStatus expectedStatus, LocalDateTime updatedAt) {
+        long updated = queryFactory
+                .update(imageJob)
+                .set(imageJob.status, ImageJobStatus.PUBLISH_PENDING.name())
+                .set(imageJob.updatedAt, updatedAt)
+                .where(
+                        imageJob.imageJobId.eq(imageJobId),
+                        imageJob.status.eq(expectedStatus.name())
+                )
+                .execute();
+
+        return updated == 1L;
+    }
+
+    @Override
     public List<ImageJobJpaEntity> findStuckJobs(ImageJobStatus status, LocalDateTime threshold) {
         return queryFactory
                 .selectFrom(imageJob)

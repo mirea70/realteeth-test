@@ -45,9 +45,12 @@ public class ImageJobRecoveryService {
                 continue;
             }
 
-            // 재발행을 위해 상태 정리 및 OutboxEvent 발행
-            job.markPublishPending(now);
-            imageJobPersistenceOutport.update(job);
+            // 원자적 상태 변경 시도
+            boolean recovered = imageJobPersistenceOutport.markRecoveredToPendingDirectly(job.getId(), ImageJobStatus.DISPATCHING, now);
+            if (!recovered) {
+                log.info("Skipping recovery for job {} as status already changed.", job.getId().getValue());
+                continue;
+            }
 
             outboxPersistenceOutport.insert(
                     OutboxEvent.createNew(
@@ -74,9 +77,12 @@ public class ImageJobRecoveryService {
         for (ImageJob job : stuckJobs) {
             log.info("Recovering stuck PUBLISHED job: {}", job.getId().getValue());
 
-            // 다시 PUBLISH_PENDING으로 돌려보내고 Outbox 재발행
-            job.markPublishPending(now);
-            imageJobPersistenceOutport.update(job);
+            // 원자적 상태 변경 시도
+            boolean recovered = imageJobPersistenceOutport.markRecoveredToPendingDirectly(job.getId(), ImageJobStatus.PUBLISHED, now);
+            if (!recovered) {
+                log.info("Skipping recovery for job {} as status already changed.", job.getId().getValue());
+                continue;
+            }
 
             outboxPersistenceOutport.insert(
                     OutboxEvent.createNew(

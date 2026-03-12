@@ -16,5 +16,6 @@ public interface ImageJobPersistenceOutport {
     boolean markDispatchingDirectly(ImageJobId imageJobId, LocalDateTime updatedAt);
     void update(ImageJob imageJob);
     boolean reschedulePoll(ImageJobId imageJobId, LocalDateTime updatedAt);
+    boolean markRecoveredToPendingDirectly(ImageJobId imageJobId, ImageJobStatus expectedStatus, LocalDateTime updatedAt);
     List<ImageJob> findStuckJobs(ImageJobStatus status, LocalDateTime threshold);
 }

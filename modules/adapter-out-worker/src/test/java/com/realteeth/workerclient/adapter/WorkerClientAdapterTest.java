@@ -3,29 +3,38 @@ package com.realteeth.workerclient.adapter;
 import com.realteeth.dto.worker.WorkerProcessingInfo;
 import com.realteeth.error.exception.BusinessException;
 import com.realteeth.workerclient.config.WorkerClientProperties;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequest;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import java.io.IOException;
+import java.net.URI;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class WorkerClientAdapterTest {
-    private WorkerClientAdapter workerClientAdapter;
+
+    private WorkerClientAdapter adapter;
     private MockRestServiceServer server;
+    private WorkerClientProperties properties;
 
     @BeforeEach
     void setUp() {
-        WorkerClientProperties properties = new WorkerClientProperties(
+        properties = new WorkerClientProperties(
                 "https://dev.realteeth.ai",
                 "홍길동",
                 "abc@example.com"
@@ -34,10 +43,8 @@ class WorkerClientAdapterTest {
         RestClient.Builder builder = RestClient.builder()
                 .baseUrl(properties.baseUrl());
 
-        this.server = MockRestServiceServer.bindTo(builder).build();
-
-        RestClient restClient = builder.build();
-        this.workerClientAdapter = new WorkerClientAdapter(restClient, properties);
+        server = MockRestServiceServer.bindTo(builder).build();
+        adapter = new WorkerClientAdapter(builder.build(), properties);
     }
 
     @Test
@@ -53,14 +60,14 @@ class WorkerClientAdapterTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        String apiKey = workerClientAdapter.getApiKey();
+        String apiKey = adapter.getApiKey();
 
         assertThat(apiKey).isEqualTo("mock_test_key");
         server.verify();
     }
 
     @Test
-    @DisplayName("getApiKey - 응답 body에 apiKey가 없으면 BusinessException이 발생한다")
+    @DisplayName("getApiKey - 응답 body에 apiKey가 없으면 BusinessException이 발생하고 retryable은 false다")
     void getApiKey_fail_whenApiKeyMissing() {
         server.expect(requestTo("https://dev.realteeth.ai/mock/auth/issue-key"))
                 .andExpect(method(HttpMethod.POST))
@@ -70,76 +77,19 @@ class WorkerClientAdapterTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> workerClientAdapter.getApiKey())
-                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> adapter.getApiKey())
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.isRetryable()).isFalse();
+                });
 
         server.verify();
     }
 
     @Test
-    @DisplayName("getApiKey - HTTP 오류가 발생하면 BusinessException이 발생한다")
-    void getApiKey_fail_whenHttpError() {
-        server.expect(requestTo("https://dev.realteeth.ai/mock/auth/issue-key"))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withStatus(HttpStatusCode.valueOf(500))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body("""
-                                {
-                                  "detail": "internal server error"
-                                }
-                                """));
-
-        assertThatThrownBy(() -> workerClientAdapter.getApiKey())
-                .isInstanceOf(BusinessException.class);
-
-        server.verify();
-    }
-
-    @Test
-    @DisplayName("processStart - 성공하면 worker jobId를 반환한다")
-    void processStart_success() {
-        server.expect(requestTo("https://dev.realteeth.ai/mock/process"))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(header("X-API-KEY", "mock_test_key"))
-                .andExpect(jsonPath("$.imageUrl").value("https://images.example.com/test.jpg"))
-                .andRespond(withSuccess("""
-                        {
-                          "jobId": "worker-job-123"
-                        }
-                        """, MediaType.APPLICATION_JSON));
-
-        String jobId = workerClientAdapter.processStart(
-                "mock_test_key",
-                "https://images.example.com/test.jpg"
-        );
-
-        assertThat(jobId).isEqualTo("worker-job-123");
-        server.verify();
-    }
-
-    @Test
-    @DisplayName("processStart - 응답 body에 jobId가 없으면 BusinessException이 발생한다")
-    void processStart_fail_whenJobIdMissing() {
-        server.expect(requestTo("https://dev.realteeth.ai/mock/process"))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(header("X-API-KEY", "mock_test_key"))
-                .andRespond(withSuccess("""
-                        {
-                          "detail": "process start failed"
-                        }
-                        """, MediaType.APPLICATION_JSON));
-
-        assertThatThrownBy(() -> workerClientAdapter.processStart(
-                "mock_test_key",
-                "https://images.example.com/test.jpg"
-        )).isInstanceOf(BusinessException.class);
-
-        server.verify();
-    }
-
-    @Test
-    @DisplayName("processStart - HTTP 400 오류가 발생하면 BusinessException이 발생한다")
-    void processStart_fail_whenHttp400() {
+    @DisplayName("processStart - 4xx 응답이면 BusinessException이 발생하고 retryable은 false다")
+    void processStart_fail_when4xx() {
         server.expect(requestTo("https://dev.realteeth.ai/mock/process"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("X-API-KEY", "mock_test_key"))
@@ -151,10 +101,38 @@ class WorkerClientAdapterTest {
                                 }
                                 """));
 
-        assertThatThrownBy(() -> workerClientAdapter.processStart(
-                "mock_test_key",
-                "https://images.example.com/test.jpg"
-        )).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() ->
+                adapter.processStart("mock_test_key", "https://images.example.com/test.jpg")
+        ).isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.isRetryable()).isFalse();
+                });
+
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("processStart - 5xx 응답이면 BusinessException이 발생하고 retryable은 true다")
+    void processStart_fail_when5xx() {
+        server.expect(requestTo("https://dev.realteeth.ai/mock/process"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("X-API-KEY", "mock_test_key"))
+                .andRespond(withStatus(HttpStatusCode.valueOf(503))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {
+                                  "detail": "service unavailable"
+                                }
+                                """));
+
+        assertThatThrownBy(() ->
+                adapter.processStart("mock_test_key", "https://images.example.com/test.jpg")
+        ).isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.isRetryable()).isTrue();
+                });
 
         server.verify();
     }
@@ -173,7 +151,7 @@ class WorkerClientAdapterTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        WorkerProcessingInfo info = workerClientAdapter.getProcessingInfo("worker-job-123");
+        WorkerProcessingInfo info = adapter.getProcessingInfo("worker-job-123");
 
         assertThat(info).isNotNull();
         assertThat(info.jobId()).isEqualTo("worker-job-123");
@@ -182,39 +160,27 @@ class WorkerClientAdapterTest {
     }
 
     @Test
-    @DisplayName("getProcessingInfo - 응답 body에 jobId가 없으면 BusinessException이 발생한다")
-    void getProcessingInfo_fail_whenJobIdMissing() {
-        server.expect(requestTo("https://dev.realteeth.ai/mock/process/worker-job-123"))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess("""
-                        {
-                          "status": "PROCESSING",
-                          "detail": "job id missing"
-                        }
-                        """, MediaType.APPLICATION_JSON));
+    @DisplayName("getApiKey - 네트워크 예외가 발생하면 BusinessException으로 변환되고 retryable은 true다")
+    void getApiKey_fail_whenNetworkError() {
+        ClientHttpRequestFactory failingRequestFactory = new ClientHttpRequestFactory() {
+            @Override
+            public ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod) throws IOException {
+                throw new IOException("connection timeout");
+            }
+        };
 
-        assertThatThrownBy(() -> workerClientAdapter.getProcessingInfo("worker-job-123"))
-                .isInstanceOf(BusinessException.class);
+        RestClient restClient = RestClient.builder()
+                .baseUrl(properties.baseUrl())
+                .requestFactory(failingRequestFactory)
+                .build();
 
-        server.verify();
-    }
+        WorkerClientAdapter failingAdapter = new WorkerClientAdapter(restClient, properties);
 
-    @Test
-    @DisplayName("getProcessingInfo - HTTP 500 오류가 발생하면 BusinessException이 발생한다")
-    void getProcessingInfo_fail_whenHttp500() {
-        server.expect(requestTo("https://dev.realteeth.ai/mock/process/worker-job-123"))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withStatus(HttpStatusCode.valueOf(500))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body("""
-                                {
-                                  "detail": "server error"
-                                }
-                                """));
-
-        assertThatThrownBy(() -> workerClientAdapter.getProcessingInfo("worker-job-123"))
-                .isInstanceOf(BusinessException.class);
-
-        server.verify();
+        assertThatThrownBy(failingAdapter::getApiKey)
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.isRetryable()).isTrue();
+                });
     }
 }

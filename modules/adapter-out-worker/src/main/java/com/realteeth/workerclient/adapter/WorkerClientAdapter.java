@@ -97,19 +97,33 @@ public class WorkerClientAdapter implements WorkerOutport {
         try {
             return call.get();
         } catch (RestClientResponseException e) {
+            boolean retryable = isRetryableStatus(e);
+
             throw new BusinessException(
                     errorInfo,
                     Map.of(
                             "status", e.getStatusCode().value(),
                             "responseBody", e.getResponseBodyAsString()
-                    )
+                    ),
+                    retryable
             );
         } catch (RestClientException e) {
             throw new BusinessException(
                     errorInfo,
-                    Map.of("details", e.getMessage())
+                    Map.of("details", e.getMessage()),
+                    true
             );
         }
+    }
+
+    private boolean isRetryableStatus(RestClientResponseException e) {
+        int statusClass = e.getStatusCode().value() / 100;
+
+        return switch (statusClass) {
+            case 5 -> true;   // 5xx
+            case 4 -> false;  // 4xx
+            default -> false;
+        };
     }
 
     private void validateResponse(

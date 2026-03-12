@@ -24,6 +24,17 @@ public class ImageJobRecoverScheduler {
         log.info("Finished ImageJob DISPATCHING recovery scheduler.");
     }
 
+    @Scheduled(fixedDelayString = "${scheduler.imagejob.recover.published:60000}")
+    public void runPublishedRecovery() {
+        log.info("Starting ImageJob PUBLISHED recovery scheduler...");
+        try {
+            imageJobRecoveryService.recoverPublishedJobs();
+        } catch (Exception e) {
+            log.error("이미지 작업 PUBLISHED 복구 실행 중 에러 발생 : {}", e.getMessage(), e);
+        }
+        log.info("Finished ImageJob PUBLISHED recovery scheduler.");
+    }
+
     @Scheduled(fixedDelayString = "${scheduler.imagejob.recover.processing:180000}")
     public void runProcessingRecovery() {
         log.info("Starting ImageJob PROCESSING recovery scheduler...");

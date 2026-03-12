@@ -31,9 +31,9 @@ public class OutboxPublishService implements OutboxPublishUseCase {
             }
 
             try {
-                messagePublisher.publish(event.getDomainType(), event.getType(), event.getPayload());
                 boolean completed = outboxPublishTxFacade.completePublished(event);
                 if (completed) {
+                    messagePublisher.publish(event.getDomainType(), event.getType(), event.getPayload());
                     publishedCount++;
                 }
             } catch (Exception e) {

@@ -57,12 +57,12 @@ class OutboxPublishServiceTest {
 
         verify(outboxPersistenceOutport).findOnPending(10);
         verify(outboxPersistenceOutport).markPublishingDirectly(1L);
+        verify(outboxPublishTxFacade).completePublished(event);
         verify(messagePublisher).publish(
                 event.getDomainType(),
                 event.getType(),
                 event.getPayload()
         );
-        verify(outboxPublishTxFacade).completePublished(event);
         verify(outboxPublishTxFacade, never()).rollbackToPending(any());
     }
 
@@ -100,6 +100,8 @@ class OutboxPublishServiceTest {
                 .willReturn(List.of(event));
         given(outboxPersistenceOutport.markPublishingDirectly(1L))
                 .willReturn(true);
+        given(outboxPublishTxFacade.completePublished(event))
+                .willReturn(true);
 
         doThrow(new RuntimeException("mq publish failed"))
                 .when(messagePublisher)
@@ -113,12 +115,12 @@ class OutboxPublishServiceTest {
 
         verify(outboxPersistenceOutport).findOnPending(10);
         verify(outboxPersistenceOutport).markPublishingDirectly(1L);
+        verify(outboxPublishTxFacade).completePublished(event);
         verify(messagePublisher).publish(
                 event.getDomainType(),
                 event.getType(),
                 event.getPayload()
         );
-        verify(outboxPublishTxFacade, never()).completePublished(any());
         verify(outboxPublishTxFacade).rollbackToPending(1L);
     }
 
@@ -132,8 +134,6 @@ class OutboxPublishServiceTest {
                 .willReturn(List.of(event));
         given(outboxPersistenceOutport.markPublishingDirectly(1L))
                 .willReturn(true);
-        doNothing().when(messagePublisher)
-                .publish(event.getDomainType(), event.getType(), event.getPayload());
         given(outboxPublishTxFacade.completePublished(event))
                 .willThrow(new RuntimeException("tx facade failed"));
 
@@ -143,12 +143,8 @@ class OutboxPublishServiceTest {
         // then
         assertThat(result).isZero();
 
-        verify(messagePublisher).publish(
-                event.getDomainType(),
-                event.getType(),
-                event.getPayload()
-        );
         verify(outboxPublishTxFacade).completePublished(event);
+        verify(messagePublisher, never()).publish(any(), any(), any());
         verify(outboxPublishTxFacade).rollbackToPending(1L);
     }
 
@@ -214,6 +210,7 @@ class OutboxPublishServiceTest {
         given(outboxPersistenceOutport.markPublishingDirectly(3L)).willReturn(true);
 
         given(outboxPublishTxFacade.completePublished(event1)).willReturn(true);
+        given(outboxPublishTxFacade.completePublished(event3)).willReturn(true);
 
         doAnswer(invocation -> {
             DomainType domainType = invocation.getArgument(0);
@@ -232,6 +229,7 @@ class OutboxPublishServiceTest {
         // then
         assertThat(result).isEqualTo(1);
 
+        verify(outboxPublishTxFacade).completePublished(event1);
         verify(messagePublisher).publish(
                 event1.getDomainType(),
                 event1.getType(),
@@ -242,16 +240,14 @@ class OutboxPublishServiceTest {
                 event2.getType(),
                 event2.getPayload()
         );
+        verify(outboxPublishTxFacade).completePublished(event3);
         verify(messagePublisher).publish(
                 event3.getDomainType(),
                 event3.getType(),
                 event3.getPayload()
         );
 
-        verify(outboxPublishTxFacade).completePublished(event1);
         verify(outboxPublishTxFacade, never()).completePublished(event2);
-        verify(outboxPublishTxFacade, never()).completePublished(event3);
-
         verify(outboxPublishTxFacade).rollbackToPending(3L);
     }
 

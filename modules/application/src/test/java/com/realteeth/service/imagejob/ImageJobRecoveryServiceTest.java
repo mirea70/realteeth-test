@@ -26,7 +26,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class ImageJobRecoveryServiceTest {
@@ -128,6 +127,39 @@ class ImageJobRecoveryServiceTest {
         // then
         then(imageJobDelegateService).should().poll(imageJobId1, "worker-job-" + imageJobId1);
         then(imageJobDelegateService).should().poll(imageJobId2, "worker-job-" + imageJobId2);
+    }
+
+    @Test
+    @DisplayName("recoverPublishedJobs - PUBLISHED 상태에서 멈춘 작업을 PUBLISH_PENDING으로 돌리고 이벤트를 재발행한다")
+    void recoverPublishedJobs_success() {
+        // given
+        LocalDateTime now = LocalDateTime.now();
+        Long imageJobId = 100L;
+        Long outboxEventId = 200L;
+
+        ImageJob stuckJob = getImageJob(imageJobId, ImageJobStatus.PUBLISHED, 0, 0, now);
+
+        given(imageJobPersistenceOutport.findStuckJobs(eq(ImageJobStatus.PUBLISHED), any(LocalDateTime.class)))
+                .willReturn(List.of(stuckJob));
+
+        given(idGenerator.nextId()).willReturn(outboxEventId);
+        given(dataSerializerOutPort.serialize(any(WorkerDispatchEventPayload.class)))
+                .willReturn("{\"imageJobId\":100}");
+
+        // when
+        imageJobRecoveryService.recoverPublishedJobs();
+
+        // then
+        then(imageJobPersistenceOutport).should().update(stuckJob);
+        assertThat(stuckJob.getStatus()).isEqualTo(ImageJobStatus.PUBLISH_PENDING);
+
+        ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
+        then(outboxPersistenceOutport).should().insert(captor.capture());
+
+        OutboxEvent outboxEvent = captor.getValue();
+        assertThat(outboxEvent.getId()).isEqualTo(outboxEventId);
+        assertThat(outboxEvent.getDomainId()).isEqualTo(imageJobId);
+        assertThat(outboxEvent.getType()).isEqualTo(OutboxEventType.DISPATCH);
     }
 
     private ImageJob getImageJob(Long id, ImageJobStatus status, int dispatchAttemptCount, int pollAttemptCount, LocalDateTime now) {

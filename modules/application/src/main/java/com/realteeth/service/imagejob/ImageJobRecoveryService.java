@@ -65,6 +65,35 @@ public class ImageJobRecoveryService {
     }
 
     @Transactional
+    public void recoverPublishedJobs() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime threshold = now.minusMinutes(1);
+
+        List<ImageJob> stuckJobs = imageJobPersistenceOutport.findStuckJobs(ImageJobStatus.PUBLISHED, threshold);
+
+        for (ImageJob job : stuckJobs) {
+            log.info("Recovering stuck PUBLISHED job: {}", job.getId().getValue());
+
+            // 다시 PUBLISH_PENDING으로 돌려보내고 Outbox 재발행
+            job.markPublishPending(now);
+            imageJobPersistenceOutport.update(job);
+
+            outboxPersistenceOutport.insert(
+                    OutboxEvent.createNew(
+                            idGenerator.nextId(),
+                            DomainType.IMAGE_JOB,
+                            job.getId().getValue(),
+                            OutboxEventType.DISPATCH,
+                            dataSerializerOutPort.serialize(
+                                    new WorkerDispatchEventPayload(job.getId().getValue())
+                            ),
+                            now
+                    )
+            );
+        }
+    }
+
+    @Transactional
     public void recoverProcessingJobs() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime threshold = now.minusMinutes(5);

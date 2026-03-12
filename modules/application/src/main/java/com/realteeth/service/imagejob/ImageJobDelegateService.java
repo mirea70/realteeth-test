@@ -13,7 +13,7 @@ import com.realteeth.port.out.*;
 import com.realteeth.worker.WorkerPollEventPayload;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -29,8 +29,8 @@ public class ImageJobDelegateService {
     private final WorkerOutport workerOutport;
     private final IdGenerator idGenerator;
     private final DataSerializerOutPort dataSerializerOutPort;
+    private final TransactionTemplate transactionTemplate;
 
-    @Transactional
     public void dispatch(Long imageJobId) {
         ImageJob imageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
                 .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
@@ -41,8 +41,11 @@ public class ImageJobDelegateService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        boolean claimed = imageJobPersistenceOutport.markDispatchingDirectly(imageJob.getId(), now);
-        if(!claimed){
+        Boolean claimed = transactionTemplate.execute(status ->
+                imageJobPersistenceOutport.markDispatchingDirectly(new ImageJobId(imageJobId), now)
+        );
+
+        if(claimed == null || !claimed){
             return;
         }
 
@@ -56,36 +59,37 @@ public class ImageJobDelegateService {
             return;
         }
 
-        // MockWorker에 작업 위임
+        // MockWorker에 작업 위임 (트랜잭션 밖에서 수행)
         String workerJobId = startWorkerOrHandleFailure(dispatchingImageJob, now);
         if(workerJobId == null){
             return;
         }
 
-        // Processing으로 변경
-        dispatchingImageJob.markProcessing(workerJobId, now);
-        imageJobPersistenceOutport.update(dispatchingImageJob);
+        transactionTemplate.executeWithoutResult(status -> {
+            // Processing으로 변경
+            dispatchingImageJob.markProcessing(workerJobId, now);
+            imageJobPersistenceOutport.update(dispatchingImageJob);
 
-        // Poll 이벤트 발행
-        outboxPersistenceOutport.insert(
-                OutboxEvent.createScheduled(
-                        idGenerator.nextId(),
-                        DomainType.IMAGE_JOB,
-                        imageJobId,
-                        OutboxEventType.POLL,
-                        dataSerializerOutPort.serialize(
-                                new WorkerPollEventPayload(
-                                        imageJobId,
-                                        workerJobId
-                                )
-                        ),
-                        now,
-                        now.plus(pollDelay)
-                )
-        );
+            // Poll 이벤트 발행
+            outboxPersistenceOutport.insert(
+                    OutboxEvent.createScheduled(
+                            idGenerator.nextId(),
+                            DomainType.IMAGE_JOB,
+                            imageJobId,
+                            OutboxEventType.POLL,
+                            dataSerializerOutPort.serialize(
+                                    new WorkerPollEventPayload(
+                                            imageJobId,
+                                            workerJobId
+                                    )
+                            ),
+                            now,
+                            now.plus(pollDelay)
+                    )
+            );
+        });
     }
 
-    @Transactional
     public void poll(Long imageJobId, String workerJobId) {
         ImageJob imageJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
                 .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
@@ -98,62 +102,69 @@ public class ImageJobDelegateService {
 
         WorkerProcessingInfo processingInfo;
         try {
+            // 외부 워커 호출 (트랜잭션 밖에서 수행)
             processingInfo = workerOutport.getProcessingInfo(workerJobId);
         } catch (BusinessException e) {
             if(e.isRetryable()) {
                 throw e;
             }
 
-
-
-            imageJob.markFailed(extractFailureCode(e), e.getMessage(), now);
-            imageJobPersistenceOutport.update(imageJob);
+            transactionTemplate.executeWithoutResult(status -> {
+                ImageJob innerJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
+                        .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
+                innerJob.markFailed(extractFailureCode(e), e.getMessage(), now);
+                imageJobPersistenceOutport.update(innerJob);
+            });
             return;
         }
 
-        switch (processingInfo.status()) {
-            case "PROCESSING" -> {
-                if (imageJob.getPollAttemptCount() >= 5) {
-                    imageJob.markFailed(500, "최대 상태 확인 시도 횟수 초과", now);
-                    imageJobPersistenceOutport.update(imageJob);
-                    return;
-                }
+        transactionTemplate.executeWithoutResult(tsStatus -> {
+            ImageJob innerJob = imageJobPersistenceOutport.loadOne(new ImageJobId(imageJobId))
+                    .orElseThrow(() -> new BusinessException(ImageJobErrorInfo.NOT_FOUND));
 
-                LocalDateTime nextPollAt = now.plus(pollDelay);
+            switch (processingInfo.status()) {
+                case "PROCESSING" -> {
+                    if (innerJob.getPollAttemptCount() >= 5) {
+                        innerJob.markFailed(500, "최대 상태 확인 시도 횟수 초과", now);
+                        imageJobPersistenceOutport.update(innerJob);
+                        return;
+                    }
 
-                boolean claimed = imageJobPersistenceOutport.reschedulePoll(imageJob.getId(), now);
-                if (!claimed){
-                    return;
+                    LocalDateTime nextPollAt = now.plus(pollDelay);
+
+                    boolean claimed = imageJobPersistenceOutport.reschedulePoll(innerJob.getId(), now);
+                    if (!claimed){
+                        return;
+                    }
+                    // 다음 Poll 예약
+                    outboxPersistenceOutport.insert(
+                            OutboxEvent.createScheduled(
+                                    idGenerator.nextId(),
+                                    DomainType.IMAGE_JOB,
+                                    imageJobId,
+                                    OutboxEventType.POLL,
+                                    dataSerializerOutPort.serialize(
+                                            new WorkerPollEventPayload(
+                                                    imageJobId,
+                                                    processingInfo.jobId()
+                                                    )
+                                    ),
+                                    now,
+                                    nextPollAt
+                            )
+                    );
                 }
-                // 다음 Poll 예약
-                outboxPersistenceOutport.insert(
-                        OutboxEvent.createScheduled(
-                                idGenerator.nextId(),
-                                DomainType.IMAGE_JOB,
-                                imageJobId,
-                                OutboxEventType.POLL,
-                                dataSerializerOutPort.serialize(
-                                        new WorkerPollEventPayload(
-                                                imageJobId,
-                                                processingInfo.jobId()
-                                                )
-                                ),
-                                now,
-                                nextPollAt
-                        )
-                );
+                case "COMPLETED" -> {
+                    innerJob.markSucceeded(processingInfo.result(), now);
+                    imageJobPersistenceOutport.update(innerJob);
+                }
+                case "FAILED" -> {
+                    innerJob.markFailed(400, "이미지 처리 위임 결과 -> 실패", now);
+                    imageJobPersistenceOutport.update(innerJob);
+                }
+                default -> throw new BusinessException(SystemErrorInfo.WORKER_INVALID_STATUS);
             }
-            case "COMPLETED" -> {
-                imageJob.markSucceeded(processingInfo.result(), now);
-                imageJobPersistenceOutport.update(imageJob);
-            }
-            case "FAILED" -> {
-                // Mock Worker에서 실패결과 왔을 때, 실패 상세 정보 포함될 시 고도화 가능
-                imageJob.markFailed(400, "이미지 처리 위임 결과 -> 실패", now);
-                imageJobPersistenceOutport.update(imageJob);
-            }
-            default -> throw new BusinessException(SystemErrorInfo.WORKER_INVALID_STATUS);
-        }
+        });
     }
 
     private String startWorkerOrHandleFailure(ImageJob imageJob, LocalDateTime now) {
@@ -166,7 +177,7 @@ public class ImageJobDelegateService {
             }
 
             imageJob.markFailed(extractFailureCode(e), e.getMessage(), now);
-            imageJobPersistenceOutport.update(imageJob);
+            transactionTemplate.executeWithoutResult(status -> imageJobPersistenceOutport.update(imageJob));
             return null;
         }
     }

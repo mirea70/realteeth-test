@@ -89,7 +89,7 @@ public class ImageJob {
         return switch (current) {
             case ACCEPTED -> next == PUBLISH_PENDING;
             case PUBLISH_PENDING -> next == PUBLISHED || next == FAILED;
-            case PUBLISHED -> next == DISPATCHING || next == FAILED;
+            case PUBLISHED -> next == DISPATCHING || next == PUBLISH_PENDING || next == FAILED;
             case DISPATCHING -> next == PROCESSING || next == PUBLISH_PENDING || next == FAILED;
             case PROCESSING -> next == SUCCEEDED || next == FAILED;
             case SUCCEEDED, FAILED -> false;
